@@ -40,3 +40,10 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# local-only uploaded PDFs, extracted text and processing records
+/private/
+
+# Python parser cache
+__pycache__/
+*.py[cod]

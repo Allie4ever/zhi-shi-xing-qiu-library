@@ -1,8 +1,4 @@
 {
   "d1": null,
-  "r2": {
-    "MATERIALS_BUCKET": {
-      "description": "后续用于保存上传的 PDF 原件、OCR 中间产物及预览文件；第一阶段本地运行不写入。"
-    }
-  }
+  "r2": null
 }

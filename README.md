@@ -1,4 +1,29 @@
-# vinext-starter
+# 知识星球材料库
+
+本地运行的私募研究材料 MVP。支持 PDF 私有保存、SHA-256 去重、逐页文字提取、
+状态流转、真实正文展示和浏览器内 PDF 预览。
+
+## 本地启动
+
+```bash
+npm install
+npm run dev
+```
+
+网页地址：`http://localhost:3000/`。本地材料服务运行在 `http://localhost:3001/`。
+
+## 解析单份 PDF
+
+```bash
+npm run parse:pdf -- --file "/绝对路径/材料.pdf" --route due-diligence
+```
+
+`route` 可选 `due-diligence` 或 `manager-materials`。上传文件、解析正文和状态记录
+均保存在被 Git 忽略的 `private/` 目录，不会发送到外部服务。
+
+---
+
+# 原始运行说明
 
 A clean full-stack starter running on
 [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and

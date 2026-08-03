@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import curatedData from "../data/materials-curated.json";
 
 type Route = "due-diligence" | "manager-materials";
@@ -24,6 +24,15 @@ type Material = {
   status: Status;
   pdfUrl?: string;
   fileName?: string;
+  fileHash?: string;
+  needsOcr?: boolean;
+  summaryKind?: "none" | "test-rule";
+  pages?: { pageNumber: number; text: string; charCount: number }[];
+  totalPages?: number;
+  totalChars?: number;
+  parseError?: string | null;
+  statusHistory?: { status: Status; at: string }[];
+  isLocal?: boolean;
 };
 
 const initialMaterials: Material[] = curatedData.materials.map((item) => ({
@@ -38,6 +47,7 @@ const tabs: { id: Route; label: string; hint: string }[] = [
 ];
 
 const statusOptions: Status[] = ["待解析", "待复核", "已发布", "解析失败"];
+const LOCAL_API = "http://localhost:3001";
 
 function displayDate(value: string) {
   const parts = value.split("-");
@@ -51,18 +61,32 @@ function MaterialCard({
   material,
   open,
   onToggle,
+  onRename,
+  onPublish,
+  publishing,
 }: {
   material: Material;
   open: boolean;
   onToggle: () => void;
+  onRename: (material: Material) => void;
+  onPublish: (material: Material) => void;
+  publishing: boolean;
 }) {
   const hasOriginalPdf = Boolean(material.pdfUrl || material.sourcePath);
 
   return (
     <article className={`material-card ${open ? "is-open" : ""}`}>
-      <button
+      <div
         className="card-summary"
         onClick={onToggle}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onToggle();
+          }
+        }}
+        role="button"
+        tabIndex={0}
         aria-expanded={open}
         aria-controls={`detail-${material.id}`}
       >
@@ -75,7 +99,24 @@ function MaterialCard({
             <span className="manager">{material.manager}</span>
             <span className={`status status-${material.status}`}>{material.status}</span>
           </div>
-          <h2>{material.title}</h2>
+          <div className="title-row">
+            <h2>{material.title}</h2>
+            {material.isLocal && (
+              <button
+                className="rename-button"
+                type="button"
+                aria-label={`重命名《${material.title}》`}
+                title="重命名标题"
+                onKeyDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRename(material);
+                }}
+              >
+                ✎
+              </button>
+            )}
+          </div>
           <div className="meta-row">
             <span>{material.strategy}</span>
             <span>{displayDate(material.materialDate)}</span>
@@ -94,56 +135,27 @@ function MaterialCard({
           <span>{open ? "收起" : "查看详情"}</span>
           <i>{open ? "−" : "+"}</i>
         </span>
-      </button>
+      </div>
 
       {open && (
         <div className="card-detail" id={`detail-${material.id}`}>
-          <div className="detail-grid">
-            <section className="detail-section highlights">
-              <div className="section-title">
-                <span className="section-icon">✦</span>
-                <h3>核心重点</h3>
+          {material.isLocal && (
+            <section className="record-audit">
+              <div>
+                <strong>文件 SHA-256</strong>
+                <code>{material.fileHash}</code>
               </div>
-              <ol>
-                {material.highlights.map((highlight) => (
-                  <li key={highlight}>{highlight}</li>
-                ))}
-              </ol>
-            </section>
-            <section className="detail-section risks">
-              <div className="section-title">
-                <span className="section-icon">!</span>
-                <h3>风险与待核验</h3>
+              <div>
+                <strong>处理轨迹</strong>
+                <p>{material.statusHistory?.map((item) => item.status).join(" → ")}</p>
               </div>
-              <ol>
-                {material.risks.map((risk) => (
-                  <li key={risk}>{risk}</li>
-                ))}
-              </ol>
+              {material.status === "待复核" && (
+                <button onClick={() => onPublish(material)} disabled={publishing}>
+                  {publishing ? "发布中…" : "复核完成，标记已发布"}
+                </button>
+              )}
             </section>
-          </div>
-
-          <section className="full-text">
-            <div className="section-title">
-              <span className="section-icon">¶</span>
-              <h3>完整正文</h3>
-              <span className="source-note">
-                MVP 测试正文 · 来自结构化材料
-              </span>
-            </div>
-            <p>
-              本材料围绕<strong>{material.manager}</strong>的
-              {material.strategy}展开。{material.summary}
-            </p>
-            <p>
-              从现有材料看，值得进一步关注的方面包括：
-              {material.highlights.join("；")}。
-            </p>
-            <p>
-              投资判断仍需结合原始材料与后续核验。当前重点风险包括：
-              {material.risks.join("；")}。
-            </p>
-          </section>
+          )}
 
           <section className="pdf-panel">
             <div className="pdf-toolbar">
@@ -191,7 +203,28 @@ export default function Home() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadType, setUploadType] = useState<Route>("due-diligence");
+  const [uploading, setUploading] = useState(false);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [apiReady, setApiReady] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch(`${LOCAL_API}/api/materials`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("无法读取本地材料记录");
+        return response.json();
+      })
+      .then(({ materials: localMaterials }) => {
+        const persisted = (localMaterials as Material[]).map((item) => ({ ...item, isLocal: true }));
+        setMaterials([...persisted, ...initialMaterials]);
+        setApiReady(true);
+      })
+      .catch((error) => {
+        setNotice({ kind: "error", text: `${error.message}。请确认已通过 npm run dev 启动本地服务。` });
+      });
+  }, []);
 
   const filtered = useMemo(
     () =>
@@ -229,35 +262,97 @@ export default function Home() {
     const file = event.target.files?.[0];
     if (file?.type === "application/pdf" || file?.name.toLowerCase().endsWith(".pdf")) {
       setSelectedFile(file);
+      setNotice(null);
+    } else if (file) {
+      setSelectedFile(null);
+      setNotice({ kind: "error", text: "只能上传扩展名为 .pdf 的文件。" });
     }
   }
 
-  function addUploadedMaterial() {
+  async function addUploadedMaterial() {
     if (!selectedFile) return;
-    const pdfUrl = URL.createObjectURL(selectedFile);
-    const created: Material = {
-      id: `local-${Date.now()}`,
-      route: uploadType,
-      manager: "待识别管理人",
-      title: selectedFile.name.replace(/\.pdf$/i, ""),
-      materialDate: new Date().toISOString().slice(0, 10),
-      materialType: uploadType === "due-diligence" ? "管理人尽调报告" : "管理人推介材料",
-      strategy: "待识别策略",
-      summary: "文件已进入本地处理队列，等待 PDF 文字提取、OCR 与 AI 概要生成。",
-      highlights: ["材料上传成功，尚未提取正文与关键信息。"],
-      risks: ["解析完成前请勿用于投资判断。"],
-      tags: ["本地上传", "待解析"],
-      status: "待解析",
-      pdfUrl,
-      fileName: selectedFile.name,
-    };
-    setMaterials((current) => [created, ...current]);
-    setActiveTab(uploadType);
-    setStatusFilter("全部");
-    setOpenId(created.id);
-    setSelectedFile(null);
-    setUploadOpen(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setUploading(true);
+    setNotice(null);
+    try {
+      const form = new FormData();
+      form.append("file", selectedFile);
+      const uploadResponse = await fetch(
+        `${LOCAL_API}/api/materials/upload?route=${encodeURIComponent(uploadType)}`,
+        { method: "POST", body: form },
+      );
+      const uploadResult = await uploadResponse.json();
+      if (uploadResponse.status === 409) {
+        throw new Error(`检测到重复文件，已有记录：${uploadResult.record.title}`);
+      }
+      if (!uploadResponse.ok) throw new Error(uploadResult.error || "上传保存失败");
+      const pending = { ...uploadResult.record, isLocal: true } as Material;
+      setMaterials((current) => [pending, ...current.filter((item) => item.id !== pending.id)]);
+      setActiveTab(uploadType);
+      setStatusFilter("全部");
+      setOpenId(pending.id);
+      setUploadOpen(false);
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setNotice({ kind: "success", text: "PDF 已保存到私有本地目录，正在逐页解析…" });
+
+      const parseResponse = await fetch(`${LOCAL_API}/api/materials/${pending.id}/parse`, {
+        method: "POST",
+      });
+      const parseResult = await parseResponse.json();
+      if (!parseResponse.ok) throw new Error(parseResult.error || "PDF解析失败");
+      const parsed = { ...parseResult.record, isLocal: true } as Material;
+      setMaterials((current) => current.map((item) => (item.id === parsed.id ? parsed : item)));
+      setNotice({
+        kind: parsed.needsOcr ? "error" : "success",
+        text: parsed.needsOcr
+          ? "文件已保存，但没有提取到足够文字，已标记为需要OCR。"
+          : `解析完成：共 ${parsed.totalPages} 页、${parsed.totalChars?.toLocaleString()} 个可提取字符，等待人工复核。`,
+      });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "上传或解析失败" });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function publishMaterial(material: Material) {
+    setPublishingId(material.id);
+    setNotice(null);
+    try {
+      const response = await fetch(`${LOCAL_API}/api/materials/${material.id}/publish`, { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "发布状态更新失败");
+      const published = { ...result.record, isLocal: true } as Material;
+      setMaterials((current) => current.map((item) => (item.id === published.id ? published : item)));
+      setNotice({ kind: "success", text: "材料已标记为已发布，本地记录已持久化。" });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "状态更新失败" });
+    } finally {
+      setPublishingId(null);
+    }
+  }
+
+  async function renameMaterial(material: Material) {
+    const nextTitle = window.prompt("请输入新的材料标题", material.title)?.trim();
+    if (!nextTitle || nextTitle === material.title) return;
+    setRenamingId(material.id);
+    setNotice(null);
+    try {
+      const response = await fetch(`${LOCAL_API}/api/materials/${material.id}/rename`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: nextTitle }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "重命名失败");
+      const renamed = { ...result.record, isLocal: true } as Material;
+      setMaterials((current) => current.map((item) => (item.id === renamed.id ? renamed : item)));
+      setNotice({ kind: "success", text: "材料标题已更新，刷新页面后仍会保留。" });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "重命名失败" });
+    } finally {
+      setRenamingId(null);
+    }
   }
 
   const currentTab = tabs.find((tab) => tab.id === activeTab)!;
@@ -281,6 +376,7 @@ export default function Home() {
       </header>
 
       <div className="workspace">
+        {notice && <div className={`notice notice-${notice.kind}`} role="status">{notice.text}</div>}
         <section className="hero">
           <div>
             <p className="kicker">RESEARCH ARCHIVE / 研究档案</p>
@@ -359,6 +455,9 @@ export default function Home() {
                   material={material}
                   open={openId === material.id}
                   onToggle={() => setOpenId(openId === material.id ? null : material.id)}
+                  onRename={renameMaterial}
+                  onPublish={publishMaterial}
+                  publishing={publishingId === material.id || renamingId === material.id}
                 />
               ))
             ) : (
@@ -391,7 +490,9 @@ export default function Home() {
             </button>
             <p className="section-kicker">LOCAL INGEST</p>
             <h2 id="upload-title">上传一份 PDF 材料</h2>
-            <p className="modal-intro">文件仅在当前浏览器会话中预览，不会改动原始参考文件。</p>
+            <p className="modal-intro">
+              文件将保存到项目的私有本地目录，并计算 SHA-256 去重。不会上传到任何外部服务。
+            </p>
             <div className="type-choice">
               {tabs.map((tab) => (
                 <button
@@ -414,8 +515,8 @@ export default function Home() {
               <span>待复核</span><i />
               <span>已发布</span>
             </div>
-            <button className="confirm-upload" disabled={!selectedFile} onClick={addUploadedMaterial}>
-              加入处理队列
+            <button className="confirm-upload" disabled={!selectedFile || uploading || !apiReady} onClick={addUploadedMaterial}>
+              {uploading ? "正在保存与解析…" : apiReady ? "保存并开始解析" : "本地服务未就绪"}
             </button>
           </section>
         </div>

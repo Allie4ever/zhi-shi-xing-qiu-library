@@ -5,13 +5,18 @@
 ## 当前范围
 
 - `data/materials-curated.json` 是从上级目录只读复制的测试数据快照。
-- 本地上传仅在当前浏览器会话中保留，并生成 PDF 临时预览地址。
+- 上传 PDF 会复制到忽略版本控制的 `private/uploads/`，记录和逐页正文写入
+  `private/data/materials.json`。
+- 文件按 SHA-256 去重；重复文件不会再次保存。
+- `pdfplumber` 按页提取文字并保留页码。提取字符不足时标记“需要OCR”，不生成正文。
+- 摘要暂由本地规则生成，所有结果均带“测试摘要/测试提取/测试提示”标记。
+- 逐页提取正文仅作为本地解析依据保存，不在页面详情中展示；用户直接预览原始 PDF。
 - 带教提供的原始 Markdown、JSON 和 PDF 不会被本项目修改。
-- 暂不访问知识星球，也不调用 OCR、AI 或云存储。
+- 暂不访问知识星球，也不调用 OCR、AI 或任何云存储。
 
 ## 预留接口
 
-`lib/integrations/contracts.ts` 定义了知识星球采集、PDF 文字提取、OCR、AI 总结和对象存储（Cloudflare R2）的适配器边界，后续可分别实现。
+`lib/integrations/contracts.ts` 保留后续能力边界，但当前运行配置明确关闭 D1/R2。
 
 ## 本地运行
 
@@ -21,3 +26,15 @@ npm run dev
 ```
 
 默认访问 `http://localhost:3000/`。
+
+## 命令行解析单份 PDF
+
+```bash
+npm run parse:pdf -- --file "/绝对路径/材料.pdf" --route due-diligence
+```
+
+路演材料使用：
+
+```bash
+npm run parse:pdf -- --file "/绝对路径/材料.pdf" --route manager-materials
+```
