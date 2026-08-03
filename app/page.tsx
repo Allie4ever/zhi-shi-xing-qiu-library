@@ -4,11 +4,11 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { builtInMaterials } from "../data/materials-public";
 import { extractPdfPages, MAX_PDF_SIZE, sha256 } from "../lib/browser-pdf";
 import {
-  clearLocalMaterials, createBackup, deleteLocalMaterial, ensureStorageCapacity,
-  findLocalMaterialByHash, listLocalMaterials, restoreBackupRecord, saveLocalMaterial,
-  type BackupFile,
+  deleteMaterialPersistently, ensureStorageCapacity, findLocalMaterialByHash,
+  listDeletedMaterialIds, listLocalMaterials, saveLocalMaterial,
 } from "../lib/browser-material-store";
 import type { Material, Route, Status } from "../lib/material-types";
+import { filterAndSortMaterials, parseMaterialDate } from "../lib/material-query";
 
 type AiScope = "all" | Route | "current";
 type Citation = { materialId: string; title: string; manager: string; pageNumber: number | null; paragraphLabel: string; excerpt: string };
@@ -54,15 +54,15 @@ function buildCitations(materials: Material[], question: string, scope: AiScope,
   } satisfies Citation));
 }
 
-function MaterialCard({ material, open, onToggle, onRename, onStatus, onDelete }: {
+function MaterialCard({ material, open, onToggle, onRename, onStatus, onDelete, deleting }: {
   material: Material; open: boolean; onToggle: () => void; onRename: () => void;
-  onStatus: () => void; onDelete: () => void;
+  onStatus: () => void; onDelete: () => void; deleting: boolean;
 }) {
   return <article id={`material-${material.id}`} className={`material-card ${open ? "is-open" : ""}`}>
     <div className="card-summary" role="button" tabIndex={0} aria-expanded={open} onClick={onToggle} onKeyDown={(event) => {
       if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onToggle(); }
     }}>
-      <div className="card-date"><span>{material.materialDate.slice(0, 4)}</span><strong>{material.materialDate.slice(5).replace("-", ".") || "—"}</strong></div>
+      <div className="card-date"><span>{material.materialDate?.slice(0, 4) || "日期"}</span><strong>{material.materialDate?.slice(5).replace("-", ".") || "未知"}</strong><button className="card-delete" type="button" disabled={deleting} aria-label={`删除《${material.title}》`} title={deleting ? "正在删除" : "删除材料"} onClick={(event) => { event.stopPropagation(); onDelete(); }}>{deleting ? <span className="delete-loading">…</span> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5" /></svg>}</button></div>
       <div className="card-main">
         <div className="eyebrow-row"><span className="manager">{material.manager}</span><span className={`status status-${material.status}`}>{material.status}</span><span className={`source-badge source-${material.sourceType}`}>{material.sourceType === "local" ? "本地上传" : "网站内置"}</span></div>
         <div className="title-row"><h2>{material.title}</h2>{material.sourceType === "local" && <button className="rename-button" aria-label="重命名标题" title="重命名标题" onClick={(event) => { event.stopPropagation(); onRename(); }}>✎</button>}</div>
@@ -81,7 +81,7 @@ function MaterialCard({ material, open, onToggle, onRename, onStatus, onDelete }
       {material.sourceType === "local" && <section className="record-audit">
         <div><strong>文件 SHA-256</strong><code>{material.fileHash}</code></div>
         <div><strong>本地保存</strong><p>{material.savePdf ? "正文与PDF原件" : "仅正文（未保存PDF原件）"}</p></div>
-        <div className="record-actions"><button onClick={onStatus}>{material.status === "已发布" ? "改为待复核" : "标记已发布"}</button><button className="danger-action" onClick={onDelete}>删除</button></div>
+        <div className="record-actions"><button onClick={onStatus}>{material.status === "已发布" ? "改为待复核" : "标记已发布"}</button></div>
       </section>}
       <section className="text-panel"><div className="text-panel-head"><h3>程序提取的真实完整正文</h3><span>{material.needsOcr ? "需要OCR" : material.pages?.length ? `${material.totalPages}页 · ${material.totalChars?.toLocaleString()}字符` : "暂无正文"}</span></div>
         {material.needsOcr ? <div className="text-empty">PDF未提取到有效文字，已标记“需要OCR”，没有生成虚假正文。</div> : material.pages?.length ? <div className="page-text-list">{material.pages.map((page) => <section key={page.pageNumber}><h4>第 {page.pageNumber} 页 <small>{page.charCount} 字符</small></h4><p>{page.text || "（本页没有可提取文字）"}</p></section>)}</div> : <div className="text-empty">网站内置记录未公开附带PDF正文。</div>}
@@ -96,17 +96,21 @@ function MaterialCard({ material, open, onToggle, onRename, onStatus, onDelete }
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Route>("due-diligence");
   const [localMaterials, setLocalMaterials] = useState<Material[]>([]);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<Status | "全部">("全部");
   const [query, setQuery] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const deletingIdRef = useRef<string | null>(null);
   const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadForm, setUploadForm] = useState({ route: "due-diligence" as Route, manager: "", title: "", materialDate: new Date().toISOString().slice(0, 10), savePdf: true });
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const backupInputRef = useRef<HTMLInputElement>(null);
   const objectUrls = useRef<string[]>([]);
 
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
@@ -122,7 +126,7 @@ export default function Home() {
   const [chatBusy, setChatBusy] = useState(false);
 
   const hydrate = async () => {
-    const records = await listLocalMaterials();
+    const [records, persistedDeletedIds] = await Promise.all([listLocalMaterials(), listDeletedMaterialIds()]);
     objectUrls.current.forEach(URL.revokeObjectURL);
     objectUrls.current = [];
     const withUrls = records.sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "")).map((item) => {
@@ -132,14 +136,16 @@ export default function Home() {
       return { ...item, pdfUrl };
     });
     setLocalMaterials(withUrls);
+    setDeletedIds(new Set(persistedDeletedIds));
     setLoaded(true);
   };
 
   useEffect(() => { hydrate().catch((error) => setNotice({ kind: "error", text: safeError(error, "无法读取浏览器材料库") })); return () => objectUrls.current.forEach(URL.revokeObjectURL); }, []);
 
-  const materials = useMemo(() => [...localMaterials, ...builtInMaterials], [localMaterials]);
-  const filtered = useMemo(() => materials.filter((material) => material.route === activeTab && (statusFilter === "全部" || material.status === statusFilter) && [material.manager, material.strategy, ...material.tags].join(" ").toLowerCase().includes(query.trim().toLowerCase())), [materials, activeTab, statusFilter, query]);
+  const materials = useMemo(() => [...localMaterials, ...builtInMaterials].filter((material) => !deletedIds.has(material.id)), [localMaterials, deletedIds]);
+  const filtered = useMemo(() => filterAndSortMaterials(materials, { route: activeTab, status: statusFilter, query, selectedYear, selectedMonth }), [materials, activeTab, statusFilter, query, selectedYear, selectedMonth]);
   const counts = useMemo(() => Object.fromEntries(statusOptions.map((status) => [status, materials.filter((item) => item.route === activeTab && item.status === status).length])) as Record<Status, number>, [materials, activeTab]);
+  const availableYears = useMemo(() => Array.from(new Set(materials.map((item) => parseMaterialDate(item.materialDate)?.year).filter((year): year is number => Boolean(year)))).sort((left, right) => right - left), [materials]);
 
   function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -188,39 +194,22 @@ export default function Home() {
   }
 
   async function removeMaterial(material: Material) {
-    if (!confirm(`确定删除《${material.title}》吗？`)) return;
-    if (!confirm("删除后只能通过之前导出的备份恢复。请再次确认删除。")) return;
-    await deleteLocalMaterial(material.id); if (openId === material.id) setOpenId(null); await hydrate(); setNotice({ kind: "success", text: "本地材料已删除。" });
-  }
-
-  async function clearAll() {
-    if (!localMaterials.length) return setNotice({ kind: "error", text: "当前没有本地材料。" });
-    if (!confirm(`确定清空当前浏览器中的 ${localMaterials.length} 份本地材料吗？`)) return;
-    if (!confirm("此操作不可撤销，请确认已经导出备份。再次确认清空？")) return;
-    await clearLocalMaterials(); setOpenId(null); await hydrate(); setNotice({ kind: "success", text: "本地材料已清空。" });
-  }
-
-  async function exportBackup() {
-    if (!localMaterials.length) return setNotice({ kind: "error", text: "当前没有可导出的本地材料。" });
-    const raw = await listLocalMaterials(); const backup = await createBackup(raw);
-    const url = URL.createObjectURL(new Blob([JSON.stringify(backup)], { type: "application/json" }));
-    const anchor = document.createElement("a"); anchor.href = url; anchor.download = `知识星球材料库备份-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(anchor); anchor.click(); anchor.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setNotice({ kind: "success", text: `已导出 ${raw.length} 份本地材料。` });
-  }
-
-  async function importBackup(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]; if (!file) return;
+    if (deletingIdRef.current) return;
+    if (!confirm(`确定要删除《${material.title}》吗？删除后不可恢复。`)) return;
+    deletingIdRef.current = material.id;
+    setDeletingId(material.id);
+    setNotice(null);
     try {
-      const backup = JSON.parse(await file.text()) as BackupFile;
-      if (backup.format !== "zhi-shi-xing-qiu-library-backup" || backup.version !== 1 || !Array.isArray(backup.materials)) throw new Error("这不是有效的材料库备份文件。");
-      let restored = 0, skipped = 0;
-      for (const record of backup.materials) {
-        if (!record.fileHash || await findLocalMaterialByHash(record.fileHash)) { skipped += 1; continue; }
-        await saveLocalMaterial(restoreBackupRecord(record)); restored += 1;
-      }
-      await hydrate(); setNotice({ kind: "success", text: `备份导入完成：恢复 ${restored} 份，跳过重复 ${skipped} 份。` });
-    } catch (error) { setNotice({ kind: "error", text: safeError(error, "备份导入失败") }); } finally { event.target.value = ""; }
+      await deleteMaterialPersistently(material.id, material.sourceType === "local");
+      if (openId === material.id) setOpenId(null);
+      await hydrate();
+      setNotice({ kind: "success", text: `《${material.title}》已删除。` });
+    } catch (error) {
+      setNotice({ kind: "error", text: safeError(error, `《${material.title}》删除失败，原卡片已保留。`) });
+    } finally {
+      deletingIdRef.current = null;
+      setDeletingId(null);
+    }
   }
 
   async function callAi(messages: { role: string; content: string }[], maxTokens = 700) {
@@ -267,12 +256,12 @@ export default function Home() {
     <header className="topbar"><a className="brand" href="#"><span className="brand-mark">知</span><span><strong>知识星球材料库</strong><small>PRIVATE FUND RESEARCH LIBRARY</small></span></a><div className="header-actions"><span className="local-pill"><i /> 浏览器本地模式</span><button className="ai-entry" onClick={() => setAiSettingsOpen(true)}><span className={aiConfigured ? "is-ready" : ""} /> AI设置</button><button className="assistant-entry" onClick={() => setAssistantOpen(true)}>✦ AI材料助手</button><button className="upload-button" onClick={() => setUploadOpen(true)}><span>＋</span> 上传材料</button></div></header>
     <div className="workspace">
       {notice && <div className={`notice notice-${notice.kind}`} role="status">{notice.text}</div>}
-      <div className="privacy-warning">本地上传材料仅保存在当前浏览器。清除浏览器数据、使用无痕模式或更换设备可能导致材料丢失，请定期导出备份。</div>
-      <section className="hero"><div><p className="kicker">RESEARCH ARCHIVE / 研究档案</p><h1>把每一份材料，<em>变成可验证的判断。</em></h1><p className="hero-copy">网站内置材料与当前浏览器本地材料合并展示；本地文件不会上传到GitHub或云端。</p></div><div className="hero-stats"><div><strong>{materials.length}</strong><span>材料总数</span></div><div><strong>{builtInMaterials.length}</strong><span>网站内置</span></div><div><strong>{localMaterials.length}</strong><span>本地上传</span></div></div></section>
+      <div className="privacy-warning">本地上传材料仅保存在当前浏览器。清除浏览器数据、使用无痕模式或更换设备可能导致材料丢失。</div>
+      <section className="hero"><div><p className="kicker">RESEARCH ARCHIVE / 研究档案</p><h1>把每一份材料，<em>变成可验证的判断。</em></h1><p className="hero-copy">网站内置材料与当前浏览器本地材料合并展示；本地文件不会上传到GitHub或云端。</p></div><div className="hero-stats"><div><strong>{materials.length}</strong><span>材料总数</span></div><div><strong>{materials.filter((item) => item.sourceType === "built-in").length}</strong><span>网站内置</span></div><div><strong>{materials.filter((item) => item.sourceType === "local").length}</strong><span>本地上传</span></div></div></section>
       <nav className="tabs">{tabs.map((tab) => <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => { setActiveTab(tab.id); setStatusFilter("全部"); setOpenId(null); }}><span>{tab.label}</span><small>{tab.hint}</small><b>{materials.filter((item) => item.route === tab.id).length}</b></button>)}</nav>
-      <section className="library"><div className="library-head"><div><p className="section-kicker">MATERIAL INDEX</p><h2>{currentTab.label}</h2><p>{currentTab.hint}，共 {materials.filter((item) => item.route === activeTab).length} 份。</p></div><label className="search"><span>⌕</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索管理人或策略" /></label></div>
-        <div className="library-tools"><div className="status-filters"><button className={statusFilter === "全部" ? "active" : ""} onClick={() => setStatusFilter("全部")}>全部 <span>{materials.filter((item) => item.route === activeTab).length}</span></button>{statusOptions.map((status) => <button key={status} className={statusFilter === status ? "active" : ""} onClick={() => setStatusFilter(status)}>{status} <span>{counts[status]}</span></button>)}</div><div className="backup-actions"><button onClick={exportBackup}>导出本地材料库</button><button onClick={() => backupInputRef.current?.click()}>导入本地材料库</button><button className="danger-link" onClick={clearAll}>清空本地材料</button><input ref={backupInputRef} hidden type="file" accept="application/json,.json" onChange={importBackup} /></div></div>
-        <div className="material-list">{!loaded ? <div className="empty-state"><p>正在读取浏览器材料库…</p></div> : filtered.length ? filtered.map((material) => <MaterialCard key={material.id} material={material} open={openId === material.id} onToggle={() => setOpenId(openId === material.id ? null : material.id)} onRename={() => renameMaterial(material)} onStatus={() => updateMaterial(material, { status: material.status === "已发布" ? "待复核" : "已发布" }).catch((error) => setNotice({ kind: "error", text: safeError(error, "状态更新失败") }))} onDelete={() => removeMaterial(material).catch((error) => setNotice({ kind: "error", text: safeError(error, "删除失败") }))} />) : <div className="empty-state"><span>◎</span><h3>没有符合条件的材料</h3><p>调整状态或搜索词后再试。</p></div>}</div>
+      <section className="library"><div className="library-head"><div><p className="section-kicker">MATERIAL INDEX</p><h2>{currentTab.label}</h2><p>{currentTab.hint}，共 {materials.filter((item) => item.route === activeTab).length} 份。</p></div><div className="filter-stack"><label className="search"><span>⌕</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索管理人或策略" /></label><div className="month-filter"><label><span>年份</span><select value={selectedYear} onChange={(event) => setSelectedYear(event.target.value)}><option value="">全部年份</option>{availableYears.map((year) => <option key={year} value={year}>{year}年</option>)}</select></label><label><span>月份</span><select value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)}><option value="">全部月份</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <option key={month} value={month}>{month}月</option>)}</select></label></div></div></div>
+        <div className="status-filters"><button className={statusFilter === "全部" ? "active" : ""} onClick={() => setStatusFilter("全部")}>全部 <span>{materials.filter((item) => item.route === activeTab).length}</span></button>{statusOptions.map((status) => <button key={status} className={statusFilter === status ? "active" : ""} onClick={() => setStatusFilter(status)}>{status} <span>{counts[status]}</span></button>)}</div>
+        <div className="material-list">{!loaded ? <div className="empty-state"><p>正在读取浏览器材料库…</p></div> : filtered.length ? filtered.map((material) => <MaterialCard key={material.id} material={material} open={openId === material.id} onToggle={() => setOpenId(openId === material.id ? null : material.id)} onRename={() => renameMaterial(material)} onStatus={() => updateMaterial(material, { status: material.status === "已发布" ? "待复核" : "已发布" }).catch((error) => setNotice({ kind: "error", text: safeError(error, "状态更新失败") }))} onDelete={() => removeMaterial(material)} deleting={deletingId === material.id} />) : <div className="empty-state"><span>◎</span><h3>没有符合条件的材料</h3><p>当前搜索词、状态或月份下没有材料，请调整筛选条件。</p></div>}</div>
       </section><footer><span>9份网站内置材料 · 本地材料仅当前浏览器可见</span><span>无后端 · GitHub Pages · IndexedDB</span></footer>
     </div>
     {uploadOpen && <div className="modal-backdrop" onMouseDown={() => !uploading && setUploadOpen(false)}><section className="upload-modal" role="dialog" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setUploadOpen(false)}>×</button><p className="section-kicker">BROWSER-ONLY INGEST</p><h2>本地导入一份PDF</h2><p className="modal-intro">PDF仅在当前浏览器处理，默认最大20MB，不会发送到GitHub或任何云端。</p><div className="type-choice">{tabs.map((tab) => <button key={tab.id} className={uploadForm.route === tab.id ? "active" : ""} onClick={() => setUploadForm((form) => ({ ...form, route: tab.id }))}>{tab.label}</button>)}</div><div className="upload-fields"><label>管理人<input value={uploadForm.manager} onChange={(event) => setUploadForm((form) => ({ ...form, manager: event.target.value }))} placeholder="请输入管理人" /></label><label>标题<input value={uploadForm.title} onChange={(event) => setUploadForm((form) => ({ ...form, title: event.target.value }))} placeholder="默认使用文件名" /></label><label>日期<input type="date" value={uploadForm.materialDate} onChange={(event) => setUploadForm((form) => ({ ...form, materialDate: event.target.value }))} /></label></div><button className={`dropzone ${selectedFile ? "has-file" : ""}`} onClick={() => fileInputRef.current?.click()}><span className="upload-symbol">{selectedFile ? "✓" : "↑"}</span><strong>{selectedFile?.name || "选择本地PDF"}</strong><small>{selectedFile ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB` : "仅支持.pdf，最大20MB"}</small></button><input ref={fileInputRef} hidden type="file" accept="application/pdf,.pdf" onChange={handleFile} /><label className="save-option"><input type="checkbox" checked={!uploadForm.savePdf} onChange={(event) => setUploadForm((form) => ({ ...form, savePdf: !event.target.checked }))} /> 仅保存正文、不保存PDF原件</label><button className="confirm-upload" disabled={!selectedFile || !uploadForm.manager.trim() || !uploadForm.title.trim() || uploading} onClick={importPdf}>{uploading ? "正在本地提取与保存…" : "开始本地导入"}</button></section></div>}

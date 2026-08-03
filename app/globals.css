@@ -101,6 +101,12 @@ button { color: inherit; }
 .search span { font-size: 23px; transform: rotate(-15deg); }
 .search input { width: 100%; border: 0; outline: 0; background: transparent; font-size: 13px; }
 .search input::placeholder { color: #89918c; }
+.filter-stack { width: 330px; display: grid; justify-items: stretch; gap: 13px; }
+.filter-stack .search { width: 330px; }
+.month-filter { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; color: var(--muted); font-size: 10px; }
+.month-filter label { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; }
+.month-filter select { width: 100%; min-width: 0; height: 36px; border: 1px solid var(--line); border-radius: 3px; background: #f8f6f1; padding: 0 8px; color: var(--ink); font-size: 11px; outline: none; }
+.month-filter select:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(14,96,70,.08); }
 
 .status-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0 20px; }
 .status-filters button { border: 1px solid var(--line); background: rgba(255,255,255,.35); padding: 7px 11px; cursor: pointer; font-size: 12px; color: var(--muted); border-radius: 3px; }
@@ -115,6 +121,11 @@ button { color: inherit; }
 .card-date { border-right: 1px solid var(--line); min-height: 118px; padding-top: 2px; }
 .card-date span { display: block; color: var(--muted); font-size: 11px; letter-spacing: .08em; }
 .card-date strong { display: block; margin-top: 5px; font-family: Georgia, serif; font-size: 18px; font-weight: 400; }
+.card-delete { width: 27px; height: 27px; display: grid; place-items: center; margin-top: 27px; border: 1px solid #d6c7c2; border-radius: 50%; background: transparent; padding: 0; color: #9d5a50; cursor: pointer; }
+.card-delete svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.card-delete:hover { color: var(--risk); border-color: var(--risk); background: #f8ece9; }
+.card-delete:disabled { opacity: .45; cursor: wait; }
+.delete-loading { font-size: 13px; line-height: 1; transform: translateY(-2px); }
 .eyebrow-row { display: flex; align-items: center; gap: 10px; }
 .manager { color: var(--green); font-weight: 800; font-size: 12px; letter-spacing: .03em; }
 .status { display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 2px; font-size: 10px; }
@@ -250,6 +261,10 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
   .tabs button small { display: none; }
   .library-head { align-items: stretch; flex-direction: column; }
   .search { width: 100%; }
+  .filter-stack { width: 100%; justify-items: stretch; }
+  .filter-stack .search { width: 100%; }
+  .month-filter { grid-template-columns: 1fr 1fr; }
+  .month-filter label { grid-template-columns: 1fr; gap: 5px; }
   .card-summary { grid-template-columns: 55px 1fr; gap: 15px; padding: 20px; }
   .expand-control { grid-column: 2; }
   .card-detail { padding: 26px 20px; }
@@ -270,7 +285,10 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
   .tabs button span { font-size: 18px; }
   .tabs button b { right: 15px; top: 15px; }
   .card-summary { grid-template-columns: 1fr; }
-  .card-date { display: none; }
+  .card-date { min-height: 0; display: flex; align-items: center; gap: 8px; padding: 0 0 11px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .card-date span, .card-date strong { display: inline; margin: 0; }
+  .card-date strong { font-size: 15px; }
+  .card-delete { margin: 0 0 0 auto; }
   .expand-control { grid-column: 1; }
   .pdf-placeholder { padding: 30px 20px; }
 }
@@ -297,16 +315,10 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .page-text-list h4 small { margin-left: 8px; color: var(--muted); font-weight: 400; }
 .page-text-list p { margin: 0; white-space: pre-wrap; color: #45534d; font-size: 12px; line-height: 1.9; }
 .text-empty { padding: 35px 22px; text-align: center; color: var(--muted); font-size: 11px; }
-.library-tools { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.backup-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
-.backup-actions button { border: 1px solid var(--line); background: #f8f6f1; color: var(--green); padding: 7px 10px; cursor: pointer; font-size: 10px; }
-.backup-actions .danger-link { color: var(--risk); }
 .upload-fields { display: grid; gap: 10px; margin: 12px 0; }
 .upload-fields label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; }
 .upload-fields input { width: 100%; height: 39px; border: 1px solid var(--line); background: white; padding: 0 10px; }
 .save-option { display: flex; align-items: center; gap: 7px; margin: 14px 0; color: var(--muted); font-size: 11px; }
 @media (max-width: 840px) {
-  .library-tools { align-items: flex-start; flex-direction: column; }
-  .backup-actions { justify-content: flex-start; }
   .detail-grid { grid-template-columns: 1fr; }
 }

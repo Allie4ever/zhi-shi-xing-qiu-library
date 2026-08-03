@@ -35,6 +35,13 @@ test("浏览器存储、去重和PDF分页提取均为客户端实现", async ()
   assert.match(page, /需要OCR/);
   assert.match(page, /仅保存正文、不保存PDF原件/);
   assert.match(page, /清除浏览器数据、使用无痕模式或更换设备/);
+  assert.match(store, /deletedMaterials/);
+  assert.match(store, /transaction\(\[STORE_NAME, DELETED_STORE_NAME\], "readwrite"\)/);
+  assert.match(page, /确定要删除《\$\{material\.title\}》吗？删除后不可恢复。/);
+  assert.match(page, /deletingIdRef\.current/);
+  assert.match(page, /全部年份/);
+  assert.match(page, /全部月份/);
+  assert.doesNotMatch(page, /开始年份|结束月份/);
 });
 
 test("9份公开初始数据不包含原件、正文、凭据或本机路径", async () => {

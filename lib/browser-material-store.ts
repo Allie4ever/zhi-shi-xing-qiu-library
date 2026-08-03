@@ -1,8 +1,9 @@
 import type { Material } from "./material-types";
 
 const DB_NAME = "zhi-shi-xing-qiu-library";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "materials";
+const DELETED_STORE_NAME = "deletedMaterials";
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -12,6 +13,9 @@ function openDatabase(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
         store.createIndex("fileHash", "fileHash", { unique: true });
+      }
+      if (!db.objectStoreNames.contains(DELETED_STORE_NAME)) {
+        db.createObjectStore(DELETED_STORE_NAME, { keyPath: "id" });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -28,6 +32,18 @@ async function transact<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore
     request.onerror = () => reject(request.error ?? new Error("浏览器材料库操作失败"));
     transaction.oncomplete = () => db.close();
     transaction.onerror = () => reject(transaction.error ?? new Error("浏览器材料库事务失败"));
+  });
+}
+
+async function transactDeleted<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequest<T>) {
+  const db = await openDatabase();
+  return new Promise<T>((resolve, reject) => {
+    const transaction = db.transaction(DELETED_STORE_NAME, mode);
+    const request = run(transaction.objectStore(DELETED_STORE_NAME));
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error("删除记录保存失败"));
+    transaction.oncomplete = () => db.close();
+    transaction.onerror = () => reject(transaction.error ?? new Error("删除记录事务失败"));
   });
 }
 
@@ -49,6 +65,27 @@ export function saveLocalMaterial(material: Material) {
 
 export function deleteLocalMaterial(id: string) {
   return transact<undefined>("readwrite", (store) => store.delete(id));
+}
+
+export async function listDeletedMaterialIds() {
+  const records = await transactDeleted<Array<{ id: string }>>("readonly", (store) => store.getAll());
+  return records.map((record) => record.id);
+}
+
+export function markMaterialDeleted(id: string) {
+  return transactDeleted<IDBValidKey>("readwrite", (store) => store.put({ id, deletedAt: new Date().toISOString() }));
+}
+
+export async function deleteMaterialPersistently(id: string, deleteLocalRecord: boolean) {
+  const db = await openDatabase();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME, DELETED_STORE_NAME], "readwrite");
+    transaction.objectStore(DELETED_STORE_NAME).put({ id, deletedAt: new Date().toISOString() });
+    if (deleteLocalRecord) transaction.objectStore(STORE_NAME).delete(id);
+    transaction.oncomplete = () => { db.close(); resolve(); };
+    transaction.onabort = () => { db.close(); reject(transaction.error ?? new Error("删除操作未完成")); };
+    transaction.onerror = () => reject(transaction.error ?? new Error("删除操作失败"));
+  });
 }
 
 export function clearLocalMaterials() {

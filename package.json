@@ -6,11 +6,11 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "node scripts/dev.mjs",
+    "dev": "vite --config vite.pages.config.ts --base /",
     "build": "npm run build:pages",
     "build:pages": "vite build --config vite.pages.config.ts",
     "start": "vite preview --config vite.pages.config.ts",
-    "test": "npm run build:pages && node --test tests/*.test.mjs",
+    "test": "npm run build:pages && node --experimental-strip-types --test tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern pages-dist --ignore-pattern .next"
   },
   "dependencies": {
