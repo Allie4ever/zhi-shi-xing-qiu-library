@@ -7,17 +7,16 @@
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
-    "build:pages": "node scripts/build-pages.mjs",
-    "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
-    "test": "npm run build && npm run build:pages && node --test tests/*.test.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate",
-    "parse:pdf": "node scripts/run-parser.mjs"
+    "build": "npm run build:pages",
+    "build:pages": "vite build --config vite.pages.config.ts",
+    "start": "vite preview --config vite.pages.config.ts",
+    "test": "npm run build:pages && node --test tests/*.test.mjs",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern pages-dist --ignore-pattern .next"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
+    "pdfjs-dist": "^5.4.624",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },

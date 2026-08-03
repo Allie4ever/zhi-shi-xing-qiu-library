@@ -274,3 +274,39 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
   .expand-control { grid-column: 1; }
   .pdf-placeholder { padding: 30px 20px; }
 }
+
+/* Browser-only library additions */
+.privacy-warning { margin-top: 14px; padding: 11px 14px; border: 1px solid #dfc59f; background: #fff6e8; color: #7a5433; font-size: 11px; line-height: 1.6; }
+.source-badge { padding: 3px 7px; border: 1px solid var(--line); font-size: 9px; color: var(--muted); background: #f7f5ef; }
+.source-local { color: #8a552f; border-color: #d6b894; background: #fff4e5; }
+.detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.detail-block { min-height: 150px; padding: 18px; border-top: 3px solid var(--green); background: #eef2ee; }
+.detail-block.risk { border-color: var(--risk); background: #f7eeeb; }
+.detail-block h3 { margin: 0 0 12px; font-family: Georgia, "Songti SC", serif; font-size: 16px; }
+.detail-block p, .detail-block ol { margin: 0; padding-left: 18px; color: #53605b; font-size: 11px; line-height: 1.8; }
+.detail-block p { padding-left: 0; }
+.record-actions { display: flex; gap: 7px; }
+.record-audit .danger-action { background: var(--risk); }
+.text-panel { margin-top: 24px; border: 1px solid var(--line); background: #fff; }
+.text-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--line); background: #f3f3ed; }
+.text-panel-head h3 { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 17px; }
+.text-panel-head span { color: var(--muted); font-size: 10px; }
+.page-text-list { max-height: 670px; overflow: auto; }
+.page-text-list section { padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.page-text-list h4 { margin: 0 0 12px; color: var(--green); font-size: 12px; }
+.page-text-list h4 small { margin-left: 8px; color: var(--muted); font-weight: 400; }
+.page-text-list p { margin: 0; white-space: pre-wrap; color: #45534d; font-size: 12px; line-height: 1.9; }
+.text-empty { padding: 35px 22px; text-align: center; color: var(--muted); font-size: 11px; }
+.library-tools { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.backup-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.backup-actions button { border: 1px solid var(--line); background: #f8f6f1; color: var(--green); padding: 7px 10px; cursor: pointer; font-size: 10px; }
+.backup-actions .danger-link { color: var(--risk); }
+.upload-fields { display: grid; gap: 10px; margin: 12px 0; }
+.upload-fields label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; }
+.upload-fields input { width: 100%; height: 39px; border: 1px solid var(--line); background: white; padding: 0 10px; }
+.save-option { display: flex; align-items: center; gap: 7px; margin: 14px 0; color: var(--muted); font-size: 11px; }
+@media (max-width: 840px) {
+  .library-tools { align-items: flex-start; flex-direction: column; }
+  .backup-actions { justify-content: flex-start; }
+  .detail-grid { grid-template-columns: 1fr; }
+}

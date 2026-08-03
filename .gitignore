@@ -44,6 +44,7 @@ next-env.d.ts
 # local-only uploaded PDFs, extracted text and processing records
 /private/
 /pages-dist/
+*.tsbuildinfo
 
 # Python parser cache
 __pycache__/

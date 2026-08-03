@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 
 const processes = [
-  spawn(process.execPath, ["scripts/local-api.mjs"], { stdio: "inherit" }),
   spawn("node_modules/.bin/vinext", ["dev"], {
     stdio: "inherit",
     env: { ...process.env, WRANGLER_LOG_PATH: ".wrangler/wrangler.log" },
