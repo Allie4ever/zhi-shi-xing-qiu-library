@@ -596,7 +596,7 @@ export default function Home() {
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜索管理人、策略或标签"
+                placeholder="搜索管理人或策略"
                 aria-label="搜索材料"
               />
             </label>
