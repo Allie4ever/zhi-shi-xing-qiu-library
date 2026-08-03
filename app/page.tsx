@@ -5,6 +5,32 @@ import curatedData from "../data/materials-curated.json";
 
 type Route = "due-diligence" | "manager-materials";
 type Status = "待解析" | "待复核" | "已发布" | "解析失败";
+type AiScope = "all" | "due-diligence" | "manager-materials" | "current";
+
+type Citation = {
+  id: number;
+  materialId: string;
+  title: string;
+  manager: string;
+  pageNumber: number | null;
+  paragraphLabel: string | null;
+  excerpt: string;
+};
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  citations?: Citation[];
+};
+
+type AiPublicSettings = {
+  configured: boolean;
+  provider: string;
+  baseUrl: string;
+  model: string;
+  keyMask: string;
+};
 
 type Material = {
   id: string;
@@ -75,7 +101,7 @@ function MaterialCard({
   const hasOriginalPdf = Boolean(material.pdfUrl || material.sourcePath);
 
   return (
-    <article className={`material-card ${open ? "is-open" : ""}`}>
+    <article id={`material-${material.id}`} className={`material-card ${open ? "is-open" : ""}`}>
       <div
         className="card-summary"
         onClick={onToggle}
@@ -208,6 +234,27 @@ export default function Home() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const [apiReady, setApiReady] = useState(false);
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [aiSettings, setAiSettings] = useState<AiPublicSettings>({
+    configured: false,
+    provider: "openai-compatible",
+    baseUrl: "https://api.openai.com/v1",
+    model: "",
+    keyMask: "",
+  });
+  const [aiForm, setAiForm] = useState({
+    provider: "openai-compatible",
+    baseUrl: "https://api.openai.com/v1",
+    model: "",
+    apiKey: "",
+  });
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [chatScope, setChatScope] = useState<AiScope>("all");
+  const [chatQuestion, setChatQuestion] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatBusy, setChatBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -224,6 +271,22 @@ export default function Home() {
       .catch((error) => {
         setNotice({ kind: "error", text: `${error.message}。请确认已通过 npm run dev 启动本地服务。` });
       });
+  }, []);
+
+  useEffect(() => {
+    fetch(`${LOCAL_API}/api/ai/settings`)
+      .then((response) => response.json())
+      .then((settings: AiPublicSettings) => {
+        setAiSettings(settings);
+        setAiForm((current) => ({
+          ...current,
+          provider: settings.provider || "openai-compatible",
+          baseUrl: settings.baseUrl || current.baseUrl,
+          model: settings.model || "",
+          apiKey: "",
+        }));
+      })
+      .catch(() => {});
   }, []);
 
   const filtered = useMemo(
@@ -355,7 +418,111 @@ export default function Home() {
     }
   }
 
+  async function saveAiSettings() {
+    if (!aiForm.apiKey.trim()) {
+      setAiFeedback({ kind: "error", text: aiSettings.configured ? "如需更新设置，请重新输入API Key。" : "请输入API Key。" });
+      return false;
+    }
+    setAiBusy(true);
+    setAiFeedback(null);
+    try {
+      const response = await fetch(`${LOCAL_API}/api/ai/settings`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(aiForm),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "AI设置保存失败");
+      setAiSettings(result);
+      setAiForm((current) => ({ ...current, apiKey: "" }));
+      setAiFeedback({ kind: "success", text: "设置已保存在当前本地后端会话中。" });
+      return true;
+    } catch (error) {
+      setAiFeedback({ kind: "error", text: error instanceof Error ? error.message : "AI设置保存失败" });
+      return false;
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function testAiConnection() {
+    let ready = aiSettings.configured;
+    if (aiForm.apiKey.trim()) ready = await saveAiSettings();
+    if (!ready) {
+      setAiFeedback({ kind: "error", text: "请先完整配置AI API。" });
+      return;
+    }
+    setAiBusy(true);
+    setAiFeedback(null);
+    try {
+      const response = await fetch(`${LOCAL_API}/api/ai/test`, { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "连接测试失败");
+      setAiFeedback({ kind: "success", text: "连接成功，可以开始向材料库提问。" });
+    } catch (error) {
+      setAiFeedback({ kind: "error", text: error instanceof Error ? error.message : "连接测试失败" });
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function sendChatQuestion() {
+    const question = chatQuestion.trim();
+    if (!question || chatBusy) return;
+    if (!aiSettings.configured) {
+      setAiSettingsOpen(true);
+      setAiFeedback({ kind: "error", text: "请先配置AI API。" });
+      return;
+    }
+    const userMessage: ChatMessage = { id: `user-${Date.now()}`, role: "user", content: question };
+    const history = chatMessages.map(({ role, content }) => ({ role, content })).slice(-6);
+    setChatMessages((current) => [...current, userMessage]);
+    setChatQuestion("");
+    setChatBusy(true);
+    try {
+      const response = await fetch(`${LOCAL_API}/api/ai/chat`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          question,
+          scope: chatScope,
+          currentMaterialId: openId,
+          history,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "AI问答失败");
+      setChatMessages((current) => [...current, {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: result.answer,
+        citations: result.citations,
+      }]);
+    } catch (error) {
+      setChatMessages((current) => [...current, {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: error instanceof Error ? error.message : "AI问答失败",
+      }]);
+    } finally {
+      setChatBusy(false);
+    }
+  }
+
+  function openCitation(citation: Citation) {
+    const material = materials.find((item) => item.id === citation.materialId);
+    if (!material) return;
+    setActiveTab(material.route);
+    setStatusFilter("全部");
+    setQuery("");
+    setOpenId(material.id);
+    window.setTimeout(() => {
+      document.getElementById(`material-${material.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+  }
+
   const currentTab = tabs.find((tab) => tab.id === activeTab)!;
+  const openMaterial = materials.find((material) => material.id === openId) || null;
 
   return (
     <main>
@@ -369,6 +536,12 @@ export default function Home() {
         </a>
         <div className="header-actions">
           <span className="local-pill"><i /> 本地模式</span>
+          <button className="ai-entry" onClick={() => setAiSettingsOpen(true)}>
+            <span className={aiSettings.configured ? "is-ready" : ""} /> AI设置
+          </button>
+          <button className="assistant-entry" onClick={() => setAssistantOpen(true)}>
+            ✦ AI材料助手
+          </button>
           <button className="upload-button" onClick={() => setUploadOpen(true)}>
             <span>＋</span> 上传材料
           </button>
@@ -519,6 +692,155 @@ export default function Home() {
               {uploading ? "正在保存与解析…" : apiReady ? "保存并开始解析" : "本地服务未就绪"}
             </button>
           </section>
+        </div>
+      )}
+
+      {aiSettingsOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setAiSettingsOpen(false)}>
+          <section
+            className="ai-settings-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ai-settings-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button className="modal-close" onClick={() => setAiSettingsOpen(false)} aria-label="关闭AI设置">×</button>
+            <p className="section-kicker">LOCAL AI SESSION</p>
+            <h2 id="ai-settings-title">AI设置</h2>
+            <p className="modal-intro">
+              API Key仅保存在当前本地后端内存中，不写入项目、日志或云端；重启服务后需重新输入。
+            </p>
+            <div className="ai-form-grid">
+              <label>
+                <span>API服务商</span>
+                <select
+                  value={aiForm.provider}
+                  onChange={(event) => setAiForm({ ...aiForm, provider: event.target.value })}
+                >
+                  <option value="openai-compatible">OpenAI兼容接口</option>
+                </select>
+              </label>
+              <label>
+                <span>API地址</span>
+                <input
+                  type="url"
+                  value={aiForm.baseUrl}
+                  onChange={(event) => setAiForm({ ...aiForm, baseUrl: event.target.value })}
+                  placeholder="https://api.example.com/v1"
+                />
+              </label>
+              <label>
+                <span>模型名称</span>
+                <input
+                  value={aiForm.model}
+                  onChange={(event) => setAiForm({ ...aiForm, model: event.target.value })}
+                  placeholder="输入服务商提供的模型名称"
+                />
+              </label>
+              <label>
+                <span>API Key</span>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={aiForm.apiKey}
+                  onChange={(event) => setAiForm({ ...aiForm, apiKey: event.target.value })}
+                  placeholder={aiSettings.keyMask || "仅在当前本地会话中使用"}
+                />
+                {aiSettings.configured && <small>当前Key：{aiSettings.keyMask}</small>}
+              </label>
+            </div>
+            {aiFeedback && <div className={`ai-feedback ${aiFeedback.kind}`}>{aiFeedback.text}</div>}
+            <div className="ai-settings-actions">
+              <button className="secondary-action" onClick={testAiConnection} disabled={aiBusy}>
+                {aiBusy ? "正在连接…" : "测试连接"}
+              </button>
+              <button className="primary-action" onClick={saveAiSettings} disabled={aiBusy}>
+                保存到当前会话
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {assistantOpen && (
+        <div className="assistant-backdrop" role="presentation" onMouseDown={() => setAssistantOpen(false)}>
+          <aside
+            className="assistant-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="assistant-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="assistant-head">
+              <div>
+                <p className="section-kicker">GROUNDED MATERIAL Q&A</p>
+                <h2 id="assistant-title">AI材料助手</h2>
+              </div>
+              <button onClick={() => setAssistantOpen(false)} aria-label="关闭AI材料助手">×</button>
+            </header>
+            <div className="scope-row">
+              <label htmlFor="chat-scope">问答范围</label>
+              <select id="chat-scope" value={chatScope} onChange={(event) => setChatScope(event.target.value as AiScope)}>
+                <option value="all">全部材料</option>
+                <option value="due-diligence">尽调报告</option>
+                <option value="manager-materials">路演材料</option>
+                <option value="current" disabled={!openMaterial}>
+                  {openMaterial ? `当前材料：${openMaterial.title}` : "当前打开的单份材料"}
+                </option>
+              </select>
+            </div>
+            <div className="sharing-warning">
+              发送问题后，本地检索命中的相关材料片段会发送至你配置的AI服务商。不会发送整个材料库。
+            </div>
+            <div className="chat-thread" aria-live="polite">
+              {chatMessages.length === 0 ? (
+                <div className="chat-empty">
+                  <span>✦</span>
+                  <strong>从材料中寻找可核验的答案</strong>
+                  <p>回答将附上材料、管理人与PDF页码或正文段落。</p>
+                </div>
+              ) : chatMessages.map((message) => (
+                <article className={`chat-message ${message.role}`} key={message.id}>
+                  <span>{message.role === "user" ? "你" : "AI"}</span>
+                  <div>
+                    <p>{message.content}</p>
+                    {message.citations && message.citations.length > 0 && (
+                      <div className="citation-list">
+                        {message.citations.map((citation) => (
+                          <button key={`${message.id}-${citation.id}`} onClick={() => openCitation(citation)}>
+                            <b>[资料{citation.id}] {citation.title}</b>
+                            <span>{citation.manager} · {citation.pageNumber ? `PDF第${citation.pageNumber}页` : citation.paragraphLabel}</span>
+                            <small>{citation.excerpt}</small>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              ))}
+              {chatBusy && <div className="chat-loading">正在检索材料并生成带引用的回答…</div>}
+            </div>
+            <div className="chat-composer">
+              <textarea
+                value={chatQuestion}
+                onChange={(event) => setChatQuestion(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    sendChatQuestion();
+                  }
+                }}
+                placeholder="输入关于材料的问题…"
+                maxLength={1000}
+              />
+              <div>
+                <button className="clear-chat" onClick={() => setChatMessages([])} disabled={!chatMessages.length}>清空对话</button>
+                <button className="send-chat" onClick={sendChatQuestion} disabled={!chatQuestion.trim() || chatBusy}>
+                  {chatBusy ? "回答中…" : "发送"}
+                </button>
+              </div>
+            </div>
+          </aside>
         </div>
       )}
     </main>

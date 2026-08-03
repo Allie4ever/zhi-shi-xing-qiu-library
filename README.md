@@ -21,6 +21,14 @@ npm run parse:pdf -- --file "/绝对路径/材料.pdf" --route due-diligence
 `route` 可选 `due-diligence` 或 `manager-materials`。上传文件、解析正文和状态记录
 均保存在被 Git 忽略的 `private/` 目录，不会发送到外部服务。
 
+## AI材料助手
+
+页面右上角的“AI设置”可配置 OpenAI 兼容接口。API Key 只保存在
+当前本地后端进程的内存中，页面只返回掩码；重启 `npm run dev` 后需重新输入。
+
+问答前会在本地对已提取的 PDF 页面和测试材料段落进行分段检索，仅将命中的
+少量片段发送到用户配置的 AI 服务商，并返回可点击的材料、管理人及页码/段落引用。
+
 ---
 
 # 原始运行说明

@@ -17,6 +17,10 @@ test("finished site metadata and PDF workflow replace the starter", async () => 
   assert.match(page, /保存并开始解析/);
   assert.match(page, /重命名标题/);
   assert.match(page, /\/rename/);
+  assert.match(page, /AI设置/);
+  assert.match(page, /AI材料助手/);
+  assert.match(page, /相关材料片段会发送/);
+  assert.doesNotMatch(page, /sk-[A-Za-z0-9_-]{16,}/);
   assert.match(packageJson, /"parse:pdf"/);
   assert.match(
     await readFile(new URL("scripts/local-api.mjs", root), "utf8"),

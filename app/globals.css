@@ -25,7 +25,7 @@ body {
   font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-button, input { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { color: inherit; }
 
 .topbar {
@@ -53,6 +53,10 @@ button { color: inherit; }
 .header-actions { display: flex; align-items: center; gap: 14px; }
 .local-pill { color: var(--green); font-size: 12px; letter-spacing: .05em; }
 .local-pill i { display: inline-block; width: 7px; height: 7px; background: #22a573; border-radius: 50%; margin-right: 5px; box-shadow: 0 0 0 4px rgba(34,165,115,.12); }
+.ai-entry, .assistant-entry { height: 39px; border: 1px solid #bfc7c2; background: rgba(251,250,246,.72); padding: 0 13px; cursor: pointer; color: var(--green); font-size: 11px; font-weight: 700; }
+.ai-entry:hover, .assistant-entry:hover { border-color: var(--green); background: #e8eee9; }
+.ai-entry > span { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: #aaa; }
+.ai-entry > span.is-ready { background: #22a573; box-shadow: 0 0 0 3px rgba(34,165,115,.12); }
 .upload-button {
   border: 0; background: var(--green); color: white; height: 43px; padding: 0 20px;
   border-radius: 4px; cursor: pointer; box-shadow: 0 8px 24px rgba(14,96,70,.18);
@@ -182,9 +186,64 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .confirm-upload { width: 100%; height: 45px; border: 0; color: white; background: var(--green); font-weight: 700; cursor: pointer; }
 .confirm-upload:disabled { background: #b9bfba; cursor: not-allowed; }
 
+.ai-settings-modal { position: relative; width: min(590px, 100%); max-height: calc(100vh - 40px); overflow: auto; background: var(--card); padding: 35px; box-shadow: 0 30px 90px rgba(0,0,0,.25); animation: modalIn .2s ease-out; }
+.ai-settings-modal h2 { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 27px; }
+.ai-form-grid { display: grid; gap: 14px; }
+.ai-form-grid label { display: grid; gap: 7px; color: var(--muted); font-size: 11px; }
+.ai-form-grid label > span { color: var(--ink); font-weight: 700; }
+.ai-form-grid input, .ai-form-grid select { width: 100%; height: 43px; border: 1px solid var(--line); background: white; padding: 0 12px; outline: none; color: var(--ink); }
+.ai-form-grid input:focus, .ai-form-grid select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(14,96,70,.08); }
+.ai-form-grid small { color: var(--green); font-size: 10px; letter-spacing: .04em; }
+.ai-feedback { margin-top: 15px; padding: 11px 12px; border: 1px solid; font-size: 11px; line-height: 1.55; }
+.ai-feedback.success { color: var(--green); border-color: #9dbdaf; background: #edf5f1; }
+.ai-feedback.error { color: var(--risk); border-color: #d8aaa3; background: #fbefed; }
+.ai-settings-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+.ai-settings-actions button { min-height: 42px; padding: 0 16px; cursor: pointer; font-size: 11px; font-weight: 700; }
+.secondary-action { border: 1px solid var(--green); background: transparent; color: var(--green); }
+.primary-action { border: 1px solid var(--green); background: var(--green); color: white; }
+.ai-settings-actions button:disabled { opacity: .5; cursor: wait; }
+
+.assistant-backdrop { position: fixed; inset: 0; z-index: 45; background: rgba(8,28,21,.36); backdrop-filter: blur(3px); }
+.assistant-panel { position: absolute; right: 0; top: 0; bottom: 0; width: min(680px, 94vw); display: grid; grid-template-rows: auto auto auto 1fr auto; background: var(--card); box-shadow: -24px 0 70px rgba(0,0,0,.22); animation: assistantIn .22s ease-out; }
+@keyframes assistantIn { from { transform: translateX(30px); opacity: .65; } }
+.assistant-head { display: flex; align-items: center; justify-content: space-between; padding: 25px 28px 19px; border-bottom: 1px solid var(--line); }
+.assistant-head .section-kicker { margin-bottom: 7px; }
+.assistant-head h2 { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 27px; }
+.assistant-head > button { border: 0; background: transparent; color: var(--muted); font-size: 26px; cursor: pointer; }
+.scope-row { display: flex; align-items: center; gap: 14px; padding: 14px 28px; border-bottom: 1px solid var(--line); }
+.scope-row label { color: var(--muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
+.scope-row select { flex: 1; min-width: 0; height: 37px; border: 1px solid var(--line); background: #f8f6f1; padding: 0 10px; color: var(--ink); font-size: 11px; }
+.sharing-warning { padding: 10px 28px; background: #fff5e9; border-bottom: 1px solid #ead2b8; color: #86542f; font-size: 10px; line-height: 1.55; }
+.chat-thread { min-height: 0; overflow-y: auto; padding: 22px 28px; }
+.chat-empty { min-height: 240px; display: grid; place-items: center; align-content: center; text-align: center; color: var(--muted); }
+.chat-empty > span { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #e4eee8; color: var(--green); font-size: 18px; }
+.chat-empty strong { color: var(--ink); margin-top: 14px; font-size: 14px; }
+.chat-empty p { margin: 7px 0 0; font-size: 11px; }
+.chat-message { display: grid; grid-template-columns: 29px 1fr; gap: 10px; margin-bottom: 20px; }
+.chat-message > span { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 50%; background: #ddd; color: var(--muted); font-size: 9px; font-weight: 800; }
+.chat-message.assistant > span { background: var(--green); color: white; }
+.chat-message > div > p { white-space: pre-wrap; margin: 2px 0 0; padding: 11px 13px; background: #f0eee7; color: #405049; font-size: 12px; line-height: 1.75; }
+.chat-message.assistant > div > p { background: #edf3ef; }
+.citation-list { display: grid; gap: 7px; margin-top: 8px; }
+.citation-list button { width: 100%; display: grid; gap: 3px; padding: 10px 11px; border: 1px solid var(--line); background: #faf9f4; text-align: left; cursor: pointer; }
+.citation-list button:hover { border-color: var(--green); background: #f0f5f2; }
+.citation-list b { color: var(--green); font-size: 10px; }
+.citation-list span { color: var(--muted); font-size: 9px; }
+.citation-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #66726d; font-size: 9px; }
+.chat-loading { margin: 0 0 16px 39px; color: var(--green); font-size: 10px; }
+.chat-composer { padding: 16px 28px 22px; border-top: 1px solid var(--line); background: #f7f5ef; }
+.chat-composer textarea { width: 100%; min-height: 90px; resize: vertical; border: 1px solid var(--line); background: white; padding: 12px; outline: none; font-size: 12px; line-height: 1.55; }
+.chat-composer textarea:focus { border-color: var(--green); }
+.chat-composer > div { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; }
+.clear-chat { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 10px; }
+.send-chat { min-width: 82px; height: 37px; border: 0; background: var(--green); color: white; cursor: pointer; font-size: 11px; font-weight: 700; }
+.clear-chat:disabled, .send-chat:disabled { opacity: .45; cursor: not-allowed; }
+
 @media (max-width: 840px) {
   .topbar { padding: 0 20px; }
   .local-pill { display: none; }
+  .header-actions { gap: 7px; }
+  .ai-entry { display: none; }
   .workspace { padding: 0 20px; }
   .hero { display: block; min-height: 0; padding: 48px 0 38px; }
   .hero-stats { min-width: 0; margin-top: 30px; }
@@ -196,12 +255,16 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
   .card-detail { padding: 26px 20px; }
   .detail-grid { grid-template-columns: 1fr; gap: 14px; }
   .record-audit { grid-template-columns: 1fr; }
+  .assistant-panel { width: 100vw; }
 }
 
 @media (max-width: 520px) {
   .brand small { display: none; }
   .brand strong { font-size: 16px; }
   .upload-button { padding: 0 12px; }
+  .assistant-entry { padding: 0 10px; font-size: 0; }
+  .assistant-entry::after { content: "AI"; font-size: 11px; }
+  .assistant-head, .scope-row, .chat-thread, .chat-composer { padding-left: 18px; padding-right: 18px; }
   .hero-stats div { padding: 17px 12px; }
   .tabs button { padding: 16px; }
   .tabs button span { font-size: 18px; }

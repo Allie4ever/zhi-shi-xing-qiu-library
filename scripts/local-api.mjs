@@ -6,12 +6,16 @@ import { extname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { resolvePython } from "./python_runtime.mjs";
+import { buildChunks, loadLibraryMaterials, searchChunks } from "./material-retrieval.mjs";
+import { createAiSessionStore } from "./ai-session.mjs";
 
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const privateRoot = join(root, "private");
 const storePath = join(privateRoot, "data", "materials.json");
 const tempDir = join(privateRoot, "tmp");
 const port = Number(process.env.MATERIAL_LIBRARY_API_PORT || 3001);
+const AI_TIMEOUT_MS = 20_000;
+const aiStore = createAiSessionStore();
 
 await mkdir(join(privateRoot, "data"), { recursive: true });
 await mkdir(join(privateRoot, "uploads"), { recursive: true });
@@ -34,10 +38,56 @@ function json(res, status, value) {
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "access-control-allow-origin": "http://localhost:3000",
-    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-methods": "GET,POST,DELETE,OPTIONS",
     "access-control-allow-headers": "content-type",
   });
   res.end(JSON.stringify(value));
+}
+
+function chatCompletionsUrl(baseUrl) {
+  if (/\/chat\/completions$/i.test(baseUrl)) return baseUrl;
+  return `${baseUrl}/chat/completions`;
+}
+
+function providerError(status) {
+  if (status === 401 || status === 403) return "API Key无效或没有访问权限";
+  if (status === 402 || status === 429) return "AI服务额度不足或请求过于频繁";
+  if (status >= 500) return "AI服务暂时不可用";
+  return "AI接口请求失败，请检查API地址和模型名称";
+}
+
+async function callAi(messages, { test = false } = {}) {
+  const aiSession = aiStore.get();
+  if (!aiSession) throw new Error("尚未配置AI API");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+  try {
+    const response = await fetch(chatCompletionsUrl(aiSession.baseUrl), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${aiSession.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: aiSession.model,
+        messages,
+        temperature: 0.1,
+        max_tokens: test ? 8 : 900,
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(providerError(response.status));
+    const payload = await response.json();
+    const content = payload?.choices?.[0]?.message?.content;
+    if (typeof content !== "string" || !content.trim()) throw new Error("AI接口返回了无法识别的内容");
+    return content.trim();
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("AI接口请求超时");
+    if (error instanceof TypeError) throw new Error("AI接口不可用，请检查地址或网络连接");
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function body(req, limit = 80 * 1024 * 1024) {
@@ -99,6 +149,81 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "GET" && url.pathname === "/api/materials") {
       return json(res, 200, { materials: await records() });
+    }
+    if (req.method === "GET" && url.pathname === "/api/ai/settings") {
+      return json(res, 200, aiStore.publicSettings());
+    }
+    if (req.method === "POST" && url.pathname === "/api/ai/settings") {
+      const payload = JSON.parse((await body(req, 32 * 1024)).toString("utf8") || "{}");
+      return json(res, 200, aiStore.save(payload));
+    }
+    if (req.method === "DELETE" && url.pathname === "/api/ai/settings") {
+      return json(res, 200, aiStore.clear());
+    }
+    if (req.method === "POST" && url.pathname === "/api/ai/test") {
+      await callAi([
+        { role: "system", content: "This is a connection test. Reply only with OK." },
+        { role: "user", content: "OK" },
+      ], { test: true });
+      return json(res, 200, { ok: true, message: "连接成功" });
+    }
+    if (req.method === "POST" && url.pathname === "/api/ai/chat") {
+      if (!aiStore.get()) return json(res, 400, { error: "尚未配置AI API" });
+      const payload = JSON.parse((await body(req, 64 * 1024)).toString("utf8") || "{}");
+      const question = String(payload.question || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim();
+      const scope = ["all", "due-diligence", "manager-materials", "current"].includes(payload.scope)
+        ? payload.scope
+        : "all";
+      const currentMaterialId = typeof payload.currentMaterialId === "string" ? payload.currentMaterialId : null;
+      if (!question) return json(res, 400, { error: "请输入问题" });
+      if (question.length > 1000) return json(res, 400, { error: "问题不能超过1000个字符" });
+      if (scope === "current" && !currentMaterialId) {
+        return json(res, 400, { error: "请先打开一份材料，再选择当前材料范围" });
+      }
+
+      const materials = await loadLibraryMaterials(root);
+      const chunks = buildChunks(materials);
+      const history = Array.isArray(payload.history) ? payload.history.slice(-6) : [];
+      const retrievalQuery = `${history.map((item) => String(item.content || "").slice(0, 300)).join(" ")} ${question}`;
+      const matches = searchChunks(chunks, retrievalQuery, { scope, currentMaterialId, limit: 8 });
+      if (!matches.length || matches[0].score < 2) {
+        return json(res, 200, { answer: "当前材料库中没有足够信息", citations: [], insufficient: true });
+      }
+
+      const citations = matches.map((match, index) => ({
+        id: index + 1,
+        materialId: match.materialId,
+        title: match.title,
+        manager: match.manager,
+        pageNumber: match.pageNumber,
+        paragraphLabel: match.paragraphLabel,
+        excerpt: match.text.slice(0, 180),
+      }));
+      const context = matches.map((match, index) => [
+        `[资料${index + 1}]`,
+        `标题：${match.title}`,
+        `管理人：${match.manager}`,
+        match.pageNumber ? `PDF页码：${match.pageNumber}` : `正文段落：${match.paragraphLabel}`,
+        `内容：${match.text}`,
+      ].join("\n")).join("\n\n");
+      const safeHistory = history
+        .filter((item) => item?.role === "user" || item?.role === "assistant")
+        .map((item) => ({ role: item.role, content: String(item.content || "").slice(0, 1200) }));
+      const answer = await callAi([
+        {
+          role: "system",
+          content: [
+            "你是私募研究材料助手。只能根据提供的材料片段回答，不得补充常识、推测或编造事实。",
+            "如果材料不足，只回答“当前材料库中没有足够信息”。",
+            "每个事实性结论后使用[资料1]这种标记引用，只能使用已提供的资料编号。",
+            "保持简洁，并区分材料事实与尚需核验的信息。",
+          ].join("\n"),
+        },
+        ...safeHistory,
+        { role: "user", content: `问题：${question}\n\n可用材料：\n${context}` },
+      ]);
+      const insufficient = answer.includes("当前材料库中没有足够信息");
+      return json(res, 200, { answer, citations: insufficient ? [] : citations, insufficient });
     }
     if (req.method === "POST" && url.pathname === "/api/materials/upload") {
       const route = url.searchParams.get("route");
