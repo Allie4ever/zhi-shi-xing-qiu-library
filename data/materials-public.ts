@@ -27,5 +27,6 @@ export const builtInMaterials: Material[] = [
   builtIn("built-in-yangshi", "manager-materials", "待复核来源机构", "杨湜多策略产品介绍", "2025-07-10", "多策略", "待人工整理", ["多策略", "待复核"]),
   builtIn("built-in-smart-beta", "due-diligence", "待复核来源机构", "SmartBeta策略研究系列：价值风格指数，策略差异解构与配置价值", "2026-07-26", "Smart Beta", "待人工整理", ["Smart Beta", "价值风格", "待复核"]),
   builtIn("built-in-convertible", "manager-materials", "待复核来源机构", "量化分析报告：权益急跌中的转债韧性及估值代价", "2026-07-27", "可转债量化", "待人工整理", ["可转债", "量化分析", "待复核"]),
+  builtIn("built-in-zeyuan-2026-midyear", "manager-materials", "泽元投资", "泽元投资2026年中期回顾与前瞻", "2026-07-31", "价值投资", "待人工整理", ["价值投资", "中期回顾", "市场展望", "待人工整理"]),
+  builtIn("built-in-youmeili-2026-07", "manager-materials", "优美利", "优美利 最新纪要+QA（26.07）", "2026-07-30", "多策略", "待人工整理", ["多策略", "路演纪要", "QA", "待人工整理"]),
 ];
-

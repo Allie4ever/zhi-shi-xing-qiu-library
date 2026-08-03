@@ -44,9 +44,9 @@ test("浏览器存储、去重和PDF分页提取均为客户端实现", async ()
   assert.doesNotMatch(page, /开始年份|结束月份/);
 });
 
-test("9份公开初始数据不包含原件、正文、凭据或本机路径", async () => {
+test("11份公开初始数据不包含原件、正文、凭据或本机路径", async () => {
   const source = await readFile(new URL("data/materials-public.ts", root), "utf8");
-  assert.equal((source.match(/builtIn\("built-in-/g) ?? []).length, 9);
+  assert.equal((source.match(/builtIn\("built-in-/g) ?? []).length, 11);
   assert.doesNotMatch(source, /sourcePath|sourceMediaId|pdfBlob|fullText/);
   assert.doesNotMatch(source, /\/Users\/|Cookie|sk-[A-Za-z0-9_-]{12,}/);
 });
