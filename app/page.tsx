@@ -73,11 +73,6 @@ function MaterialCard({ material, open, onToggle, onRename, onStatus, onDelete, 
       <span className="expand-control"><span>{open ? "收起" : "查看详情"}</span><i>{open ? "−" : "+"}</i></span>
     </div>
     {open && <div className="card-detail">
-      <div className="detail-grid">
-        <section className="detail-block"><h3>人工填写的概要</h3><p>{material.summary?.trim() || "待人工整理"}</p></section>
-        <section className="detail-block"><h3>人工填写的核心重点</h3>{material.highlights.length ? <ol>{material.highlights.map((item) => <li key={item}>{item}</li>)}</ol> : <p>待人工整理</p>}</section>
-        <section className="detail-block risk"><h3>人工填写的风险与待核验</h3>{material.risks.length ? <ol>{material.risks.map((item) => <li key={item}>{item}</li>)}</ol> : <p>待人工整理</p>}</section>
-      </div>
       {material.sourceType === "local" && <section className="record-audit">
         <div><strong>文件 SHA-256</strong><code>{material.fileHash}</code></div>
         <div><strong>本地保存</strong><p>{material.savePdf ? "正文与PDF原件" : "仅正文（未保存PDF原件）"}</p></div>

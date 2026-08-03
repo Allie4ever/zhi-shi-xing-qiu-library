@@ -268,7 +268,6 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
   .card-summary { grid-template-columns: 55px 1fr; gap: 15px; padding: 20px; }
   .expand-control { grid-column: 2; }
   .card-detail { padding: 26px 20px; }
-  .detail-grid { grid-template-columns: 1fr; gap: 14px; }
   .record-audit { grid-template-columns: 1fr; }
   .assistant-panel { width: 100vw; }
 }
@@ -297,12 +296,6 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .privacy-warning { margin-top: 14px; padding: 11px 14px; border: 1px solid #dfc59f; background: #fff6e8; color: #7a5433; font-size: 11px; line-height: 1.6; }
 .source-badge { padding: 3px 7px; border: 1px solid var(--line); font-size: 9px; color: var(--muted); background: #f7f5ef; }
 .source-local { color: #8a552f; border-color: #d6b894; background: #fff4e5; }
-.detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.detail-block { min-height: 150px; padding: 18px; border-top: 3px solid var(--green); background: #eef2ee; }
-.detail-block.risk { border-color: var(--risk); background: #f7eeeb; }
-.detail-block h3 { margin: 0 0 12px; font-family: Georgia, "Songti SC", serif; font-size: 16px; }
-.detail-block p, .detail-block ol { margin: 0; padding-left: 18px; color: #53605b; font-size: 11px; line-height: 1.8; }
-.detail-block p { padding-left: 0; }
 .record-actions { display: flex; gap: 7px; }
 .record-audit .danger-action { background: var(--risk); }
 .text-panel { margin-top: 24px; border: 1px solid var(--line); background: #fff; }
@@ -319,6 +312,3 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .upload-fields label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; }
 .upload-fields input { width: 100%; height: 39px; border: 1px solid var(--line); background: white; padding: 0 10px; }
 .save-option { display: flex; align-items: center; gap: 7px; margin: 14px 0; color: var(--muted); font-size: 11px; }
-@media (max-width: 840px) {
-  .detail-grid { grid-template-columns: 1fr; }
-}
