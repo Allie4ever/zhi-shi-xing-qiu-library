@@ -5,6 +5,7 @@ import { privateLibraryPlugin } from "./build/private-library-plugin";
 
 export default defineConfig({
   root: resolve(import.meta.dirname, "pages-app"),
+  publicDir: resolve(import.meta.dirname, "public"),
   base: "/zhi-shi-xing-qiu-library/",
   plugins: [react(), privateLibraryPlugin()],
   build: { outDir: resolve(import.meta.dirname, "pages-dist"), emptyOutDir: true },

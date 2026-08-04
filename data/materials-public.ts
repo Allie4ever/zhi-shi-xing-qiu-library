@@ -1,5 +1,7 @@
 import type { Material } from "../lib/material-types";
 
+const publicAsset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
+
 const builtIn = (
   id: string,
   route: Material["route"],
@@ -27,6 +29,6 @@ export const builtInMaterials: Material[] = [
   builtIn("built-in-yangshi", "manager-materials", "待复核来源机构", "杨湜多策略产品介绍", "2025-07-10", "多策略", "待人工整理", ["多策略", "待复核"]),
   builtIn("built-in-smart-beta", "due-diligence", "待复核来源机构", "SmartBeta策略研究系列：价值风格指数，策略差异解构与配置价值", "2026-07-26", "Smart Beta", "待人工整理", ["Smart Beta", "价值风格", "待复核"]),
   builtIn("built-in-convertible", "manager-materials", "待复核来源机构", "量化分析报告：权益急跌中的转债韧性及估值代价", "2026-07-27", "可转债量化", "待人工整理", ["可转债", "量化分析", "待复核"]),
-  { ...builtIn("built-in-zeyuan-2026-midyear", "manager-materials", "泽元投资", "泽元投资2026年中期回顾与前瞻", "2026-07-31", "价值投资", "待人工整理", ["价值投资", "中期回顾", "市场展望", "待人工整理"]), originalFileName: "泽元投资2026年中期回顾与前瞻.pdf", expectedSha256: "c3ac2d8a445eb12e2309ef12b55e17be9d7ac30d222964a1edbd72dfbbf71c49", postTitle: "泽元投资2026年中期回顾与前瞻", postedAt: "2026-07-31T15:16:00+08:00" },
-  { ...builtIn("built-in-youmeili-2026-07", "manager-materials", "优美利", "优美利 最新纪要+QA（26.07）", "2026-07-30", "多策略", "待人工整理", ["多策略", "路演纪要", "QA", "待人工整理"]), originalFileName: "优美利 最新纪要+QA（26.07）.pdf", expectedSha256: "6c3a2de0576baab523cbd05ef54425ef3350071ea247be6fef9786bff00a81b0", postTitle: "优美利 最新纪要+QA（26.07）", postedAt: "2026-07-30T17:50:00+08:00" },
+  { ...builtIn("built-in-zeyuan-2026-midyear", "manager-materials", "泽元投资", "泽元投资2026年中期回顾与前瞻", "2026-07-31", "价值投资", "待人工整理", ["价值投资", "中期回顾", "市场展望", "待人工整理"]), originalFileName: "泽元投资2026年中期回顾与前瞻.pdf", fileName: "泽元投资2026年中期回顾与前瞻.pdf", fileSize: 224450, totalPages: 3, expectedSha256: "c3ac2d8a445eb12e2309ef12b55e17be9d7ac30d222964a1edbd72dfbbf71c49", postTitle: "泽元投资2026年中期回顾与前瞻", postedAt: "2026-07-31T15:16:00+08:00", groupName: "一年打卡100场路演", pdfUrl: publicAsset("materials/roadshows/zeyuan-2026-midyear-c3ac2d8a.pdf") },
+  { ...builtIn("built-in-youmeili-2026-07", "manager-materials", "优美利", "优美利 最新纪要+QA（26.07）", "2026-07-30", "多策略", "待人工整理", ["多策略", "路演纪要", "QA", "待人工整理"]), originalFileName: "优美利 最新纪要+QA（26.07）.pdf", fileName: "优美利 最新纪要+QA（26.07）.pdf", fileSize: 402754, totalPages: 9, expectedSha256: "6c3a2de0576baab523cbd05ef54425ef3350071ea247be6fef9786bff00a81b0", postTitle: "优美利 最新纪要+QA（26.07）", postedAt: "2026-07-30T17:50:00+08:00", groupName: "一年打卡100场路演", pdfUrl: publicAsset("materials/roadshows/youmeili-2026-07-6c3a2de0.pdf") },
 ];

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
@@ -60,6 +61,24 @@ test("11份公开初始数据不包含原件、正文、凭据或本机路径", 
   assert.equal((source.match(/builtIn\("built-in-/g) ?? []).length, 11);
   assert.doesNotMatch(source, /sourcePath|sourceMediaId|pdfBlob|fullText/);
   assert.doesNotMatch(source, /\/Users\/|Cookie|sk-[A-Za-z0-9_-]{12,}/);
+});
+
+test("两份确认路演PDF按哈希绑定并进入GitHub Pages产物", async () => {
+  const [source, manifestText] = await Promise.all([
+    readFile(new URL("data/materials-public.ts", root), "utf8"),
+    readFile(new URL("data/public-pdfs.json", root), "utf8"),
+  ]);
+  const manifest = JSON.parse(manifestText);
+  assert.equal(manifest.length, 2);
+  for (const item of manifest) {
+    assert.equal(item.category, "路演材料");
+    assert.match(source, new RegExp(item.cardId));
+    assert.match(source, new RegExp(item.publicPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    const pdf = await readFile(new URL(`pages-dist/${item.publicPath}`, root));
+    assert.equal(pdf.byteLength, item.fileSize);
+    assert.equal(createHash("sha256").update(pdf).digest("hex"), item.sha256);
+    assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
+  }
 });
 
 test("GitHub Pages产物使用仓库子路径且不含敏感内容", async () => {

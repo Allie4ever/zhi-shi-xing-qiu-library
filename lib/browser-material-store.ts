@@ -124,7 +124,7 @@ export function markMaterialDeleted(id: string) {
   return transactDeleted<IDBValidKey>("readwrite", (store) => store.put({ id, deletedAt: new Date().toISOString() }));
 }
 
-export async function deleteMaterialPersistently(id: string, _deleteLocalRecord: boolean) {
+export async function deleteMaterialPersistently(id: string) {
   const db = await openDatabase();
   return new Promise<void>((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME, DELETED_STORE_NAME, FILE_STORE_NAME], "readwrite");

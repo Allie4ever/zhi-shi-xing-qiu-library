@@ -1,0 +1,20 @@
+[
+  {
+    "cardId": "built-in-zeyuan-2026-midyear",
+    "originalFileName": "泽元投资2026年中期回顾与前瞻.pdf",
+    "publicPath": "materials/roadshows/zeyuan-2026-midyear-c3ac2d8a.pdf",
+    "category": "路演材料",
+    "sha256": "c3ac2d8a445eb12e2309ef12b55e17be9d7ac30d222964a1edbd72dfbbf71c49",
+    "fileSize": 224450,
+    "pageCount": 3
+  },
+  {
+    "cardId": "built-in-youmeili-2026-07",
+    "originalFileName": "优美利 最新纪要+QA（26.07）.pdf",
+    "publicPath": "materials/roadshows/youmeili-2026-07-6c3a2de0.pdf",
+    "category": "路演材料",
+    "sha256": "6c3a2de0576baab523cbd05ef54425ef3350071ea247be6fef9786bff00a81b0",
+    "fileSize": 402754,
+    "pageCount": 9
+  }
+]

@@ -68,7 +68,6 @@ function PdfViewer({ material, onReplace }: { material: Material; onReplace: () 
   const src = `${material.pdfUrl}#page=${page}&zoom=${zoom}&toolbar=1&navpanes=0`;
   useEffect(() => {
     const controller = new AbortController();
-    setLoadState({ status: "loading" });
     fetch(material.pdfUrl!, { headers: { Range: "bytes=0-0" }, signal: controller.signal }).then(async (response) => {
       if (!response.ok) {
         let detail = `${response.status} ${response.statusText}`;
@@ -80,7 +79,7 @@ function PdfViewer({ material, onReplace }: { material: Material; onReplace: () 
     return () => controller.abort();
   }, [material.pdfUrl, reloadToken]);
   return <section className="pdf-panel">
-    <div className="pdf-toolbar"><div><span className="pdf-badge">PDF</span><div><h3>原始材料</h3></div></div><div className="pdf-actions">
+    <div className="pdf-toolbar"><div><span className="pdf-badge">PDF</span><div><h3>原始材料</h3><p>{material.originalFileName || material.fileName} · {material.fileSize ? `${(material.fileSize / 1024).toFixed(1)} KB` : "大小未知"} · {material.totalPages ?? "?"}页</p></div></div><div className="pdf-actions">
       <button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>上一页</button>
       <label>第 <input aria-label="PDF页码" type="number" min="1" max={total} value={page} onChange={(event) => setPage(Math.min(total, Math.max(1, Number(event.target.value) || 1)))} /> / {total} 页</label>
       <button disabled={page >= total} onClick={() => setPage((value) => Math.min(total, value + 1))}>下一页</button>
@@ -88,7 +87,7 @@ function PdfViewer({ material, onReplace }: { material: Material; onReplace: () 
       {material.sourceType !== "private-local" && <button onClick={onReplace}>重新选择文件</button>}<a href={material.pdfUrl} target="_blank" rel="noreferrer">在新窗口打开</a>
     </div></div>
     {loadState.status === "loading" && <div className="pdf-loading">正在读取PDF原件…</div>}
-    {loadState.status === "error" && <div className="pdf-load-error"><strong>PDF加载失败</strong><p>{loadState.message}</p><button onClick={() => setReloadToken((value) => value + 1)}>重新加载</button></div>}
+    {loadState.status === "error" && <div className="pdf-load-error"><strong>PDF加载失败</strong><p>{loadState.message}</p><button onClick={() => { setLoadState({ status: "loading" }); setReloadToken((value) => value + 1); }}>重新加载</button></div>}
     {loadState.status === "ready" && <iframe title={`${material.title} PDF 预览`} src={src} loading="lazy" onError={() => setLoadState({ status: "error", message: "浏览器无法显示该PDF，请重新加载或在新窗口打开。" })} />}
   </section>;
 }
@@ -112,7 +111,7 @@ function MaterialCard({ material, open, onToggle, onRename, onStatus, onDelete, 
       <span className="expand-control"><span>{open ? "收起" : "查看详情"}</span><i>{open ? "−" : "+"}</i></span>
     </div>
     {open && <div className="card-detail">
-      {material.sourceType === "private-local" && <section className="record-audit record-source-only">
+      {(material.postTitle || material.postedAt || material.groupName) && <section className="record-audit record-source-only">
         <div><strong>原帖信息</strong><p>{material.postTitle || material.title} · {material.postedAt ? new Date(material.postedAt).toLocaleString("zh-CN") : "时间未知"} · {material.groupName || "来源未知"}</p></div>
       </section>}
       {material.sourceType === "local" && <section className="record-audit record-actions-only"><div className="record-actions"><button onClick={onStatus}>{material.status === "已发布" ? "改为待复核" : "标记已发布"}</button></div></section>}
@@ -186,7 +185,7 @@ export default function Home() {
         return response.json() as Promise<Material[]>;
       }).then((records) => setPrivateMaterials(records.map((record) => {
         const builtIn = builtInMaterials.find((item) => item.expectedSha256 === record.fileHash);
-        return builtIn ? { ...builtIn, ...record, id: builtIn.id, manager: builtIn.manager, strategy: builtIn.strategy, tags: Array.from(new Set([...builtIn.tags, ...record.tags])) } : record;
+        return builtIn ? { ...builtIn, ...record, id: builtIn.id, manager: builtIn.manager, strategy: builtIn.strategy, tags: Array.from(new Set([...builtIn.tags, ...record.tags])), pdfUrl: builtIn.pdfUrl ?? record.pdfUrl, sourceType: builtIn.pdfUrl ? "built-in" : record.sourceType } : record;
       }))).catch((error) => setNotice({ kind: "error", text: safeError(error, "本机资料索引读取失败") }));
     }
     return () => objectUrls.current.forEach(URL.revokeObjectURL);
@@ -203,7 +202,7 @@ export default function Home() {
   async function toggleMaterial(material: Material) {
     if (openId === material.id) { setOpenId(null); return; }
     setOpenId(material.id);
-    if (material.sourceType !== "private-local" || material.pages || !material.pagesUrl) return;
+    if (material.pages || !material.pagesUrl) return;
     try {
       const response = await fetch(material.pagesUrl);
       if (!response.ok) throw new Error((await response.json()).error || "分页正文读取失败");
@@ -351,7 +350,7 @@ export default function Home() {
     setDeletingId(material.id);
     setNotice(null);
     try {
-      await deleteMaterialPersistently(material.id, material.sourceType === "local");
+      await deleteMaterialPersistently(material.id);
       if (openId === material.id) setOpenId(null);
       await hydrate();
       setNotice({ kind: "success", text: `《${material.title}》已删除。` });
