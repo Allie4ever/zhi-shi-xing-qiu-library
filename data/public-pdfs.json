@@ -115,5 +115,68 @@
     "sha256": "e40fcf3e029bf57f879cb56d179be71d8b9c71567b4726c9b0d6f510ca1b8110",
     "fileSize": 4496811,
     "pageCount": 44
+  },
+  {
+    "cardId": "built-in-private-fund-weekly-20260710",
+    "originalFileName": "私募基金周报（20260706-20260710）.pdf",
+    "publicPath": "materials/due-diligence/private-fund-weekly-20260710-a7a2d8ec.pdf",
+    "category": "尽调报告",
+    "sha256": "a7a2d8ec490b8bfd7b9e68a449c11511b000ad49168ff93cd087e27333982904",
+    "fileSize": 1505169,
+    "pageCount": 13
+  },
+  {
+    "cardId": "built-in-stock-strategy-weekly-20260712",
+    "originalFileName": "20260712-股票策略环境监控周报：宽基周内V型反转，配置上注重稳健低波.pdf",
+    "publicPath": "materials/due-diligence/stock-strategy-weekly-20260712-0f2b7e6d.pdf",
+    "category": "尽调报告",
+    "sha256": "0f2b7e6da245370817d19efb6b5c9059a7960b0fdb04bce70a990715579b39d6",
+    "fileSize": 4544059,
+    "pageCount": 44
+  },
+  {
+    "cardId": "built-in-cta-weekly-20260714",
+    "originalFileName": "20260714-CTA市场跟踪周报：CTA业绩修复，把握短期波动.pdf",
+    "publicPath": "materials/due-diligence/cta-weekly-20260714-ec163b78.pdf",
+    "category": "尽调报告",
+    "sha256": "ec163b78e0d0eea3bf28b73d9dba187e626bcca942c2ccf244557e76934f4f7d",
+    "fileSize": 3223318,
+    "pageCount": 33
+  },
+  {
+    "cardId": "built-in-private-strategy-weekly-20260714",
+    "originalFileName": "20260714-私募策略跟踪周报：本周量化策略业绩回调，配置上注重稳健低波.pdf",
+    "publicPath": "materials/due-diligence/private-strategy-weekly-20260714-b23efce1.pdf",
+    "category": "尽调报告",
+    "sha256": "b23efce1a81b4be75ed0fa9158c93e937870214a6c667ba386406783e2357b38",
+    "fileSize": 2291995,
+    "pageCount": 30
+  },
+  {
+    "cardId": "built-in-ningquan-monthly-202605",
+    "originalFileName": "宁泉致远20号_2026年5月月报.pdf",
+    "publicPath": "materials/due-diligence/ningquan-monthly-202605-1b3cb552.pdf",
+    "category": "尽调报告",
+    "sha256": "1b3cb552a9347039ce0f98d5b9c1db10c4ea0bf23f1219eecd39a25a2723728b",
+    "fileSize": 521690,
+    "pageCount": 2
+  },
+  {
+    "cardId": "built-in-ruijun-monthly-202606",
+    "originalFileName": "睿郡承非品享系列-2026年6月月报.pdf",
+    "publicPath": "materials/due-diligence/ruijun-monthly-202606-9d78fd45.pdf",
+    "category": "尽调报告",
+    "sha256": "9d78fd4569a8c07b006dc5d63411ac5dae5cc1505cb25fef7641c65a50ead567",
+    "fileSize": 336786,
+    "pageCount": 2
+  },
+  {
+    "cardId": "built-in-jiukun-202607",
+    "originalFileName": "九坤量化 最新纪要+QA（26.07）.pdf",
+    "publicPath": "materials/due-diligence/jiukun-202607-b72aeddc.pdf",
+    "category": "尽调报告",
+    "sha256": "b72aeddcd55203f92a9ee03912df77ba8503a0eb1cab6bf89efdae5d2117d1cc",
+    "fileSize": 335040,
+    "pageCount": 7
   }
 ]

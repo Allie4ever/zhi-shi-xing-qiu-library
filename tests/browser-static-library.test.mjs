@@ -37,6 +37,8 @@ test("浏览器存储、去重和PDF分页提取均为客户端实现", async ()
   assert.match(page, /仅保存正文、不保存PDF原件/);
   assert.doesNotMatch(page, /localhost自动读取本机私有资料/);
   assert.match(page, /来源：知识星球知识库/);
+  assert.doesNotMatch(page, /<span>本机私有<\/span>|<span>临时导入<\/span>/);
+  assert.match(page, /<span>本地导入<\/span>/);
   assert.doesNotMatch(page, /无后端 · GitHub Pages · IndexedDB|份网站内置材料 · 本地材料仅当前浏览器可见/);
   assert.doesNotMatch(page, /upload-fields|uploadForm\.manager|uploadForm\.title|uploadForm\.materialDate/);
   assert.doesNotMatch(page, /sourceType === "private-local" \? "本机私有资料"|: "网站内置"/);
@@ -62,9 +64,9 @@ test("浏览器存储、去重和PDF分页提取均为客户端实现", async ()
   assert.doesNotMatch(page, /开始年份|结束月份/);
 });
 
-test("22份公开初始数据不包含凭据或本机路径", async () => {
+test("29份公开初始数据不包含凭据或本机路径", async () => {
   const source = await readFile(new URL("data/materials-public.ts", root), "utf8");
-  assert.equal((source.match(/builtIn\("built-in-/g) ?? []).length, 22);
+  assert.equal((source.match(/builtIn\("built-in-/g) ?? []).length, 29);
   assert.doesNotMatch(source, /sourcePath|sourceMediaId|pdfBlob|fullText/);
   assert.doesNotMatch(source, /\/Users\/|Cookie|sk-[A-Za-z0-9_-]{12,}/);
 });
@@ -75,7 +77,7 @@ test("已确认目标PDF按哈希绑定并进入GitHub Pages产物", async () =>
     readFile(new URL("data/public-pdfs.json", root), "utf8"),
   ]);
   const manifest = JSON.parse(manifestText);
-  assert.equal(manifest.length, 13);
+  assert.equal(manifest.length, 20);
   for (const item of manifest) {
     assert.ok(["尽调报告", "路演材料"].includes(item.category));
     assert.match(source, new RegExp(item.cardId));

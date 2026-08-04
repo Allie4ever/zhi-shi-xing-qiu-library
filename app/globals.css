@@ -78,7 +78,7 @@ button { color: inherit; }
 .hero h1 { margin: 0; max-width: 710px; font-family: Georgia, "Songti SC", serif; font-size: clamp(34px, 4.2vw, 58px); line-height: 1.16; letter-spacing: -.02em; font-weight: 500; }
 .hero h1 em { display: block; color: var(--green); font-style: normal; }
 .hero-copy { color: var(--muted); max-width: 580px; font-size: 15px; line-height: 1.8; margin: 24px 0 0; }
-.hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); min-width: 360px; border: 1px solid var(--line); background: rgba(251,250,246,.68); }
+.hero-stats { display: grid; grid-template-columns: repeat(2, 1fr); min-width: 280px; border: 1px solid var(--line); background: rgba(251,250,246,.68); }
 .hero-stats div { padding: 24px 22px; border-right: 1px solid var(--line); }
 .hero-stats div:last-child { border: 0; }
 .hero-stats strong { display: block; font-family: Georgia, serif; font-size: 30px; color: var(--green); font-weight: 500; }
