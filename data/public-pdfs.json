@@ -25,5 +25,14 @@
     "sha256": "620292b618300095994932454934b2547bd22452704702ef4c916e32e08f9f3d",
     "fileSize": 2780146,
     "pageCount": 49
+  },
+  {
+    "cardId": "built-in-blackwing-2026-07",
+    "originalFileName": "黑翼  A500指增CTA多策略+多策略混合纪要（26.07）.pdf",
+    "publicPath": "materials/roadshows/blackwing-2026-07-acbe88b5.pdf",
+    "category": "路演材料",
+    "sha256": "acbe88b58b13e138fba9dcfa307f551b483cb3c965cab241ab5836996cd12c99",
+    "fileSize": 346949,
+    "pageCount": 7
   }
 ]
