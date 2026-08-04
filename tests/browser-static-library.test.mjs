@@ -62,22 +62,22 @@ test("浏览器存储、去重和PDF分页提取均为客户端实现", async ()
   assert.doesNotMatch(page, /开始年份|结束月份/);
 });
 
-test("13份公开初始数据不包含凭据或本机路径", async () => {
+test("15份公开初始数据不包含凭据或本机路径", async () => {
   const source = await readFile(new URL("data/materials-public.ts", root), "utf8");
-  assert.equal((source.match(/builtIn\("built-in-/g) ?? []).length, 13);
+  assert.equal((source.match(/builtIn\("built-in-/g) ?? []).length, 15);
   assert.doesNotMatch(source, /sourcePath|sourceMediaId|pdfBlob|fullText/);
   assert.doesNotMatch(source, /\/Users\/|Cookie|sk-[A-Za-z0-9_-]{12,}/);
 });
 
-test("已确认路演PDF按哈希绑定并进入GitHub Pages产物", async () => {
+test("已确认目标PDF按哈希绑定并进入GitHub Pages产物", async () => {
   const [source, manifestText] = await Promise.all([
     readFile(new URL("data/materials-public.ts", root), "utf8"),
     readFile(new URL("data/public-pdfs.json", root), "utf8"),
   ]);
   const manifest = JSON.parse(manifestText);
-  assert.equal(manifest.length, 4);
+  assert.equal(manifest.length, 6);
   for (const item of manifest) {
-    assert.equal(item.category, "路演材料");
+    assert.ok(["尽调报告", "路演材料"].includes(item.category));
     assert.match(source, new RegExp(item.cardId));
     assert.match(source, new RegExp(item.publicPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     const pdf = await readFile(new URL(`pages-dist/${item.publicPath}`, root));

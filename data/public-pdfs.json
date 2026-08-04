@@ -11,8 +11,8 @@
   {
     "cardId": "built-in-youmeili-2026-07",
     "originalFileName": "优美利 最新纪要+QA（26.07）.pdf",
-    "publicPath": "materials/roadshows/youmeili-2026-07-6c3a2de0.pdf",
-    "category": "路演材料",
+    "publicPath": "materials/due-diligence/youmeili-2026-07-6c3a2de0.pdf",
+    "category": "尽调报告",
     "sha256": "6c3a2de0576baab523cbd05ef54425ef3350071ea247be6fef9786bff00a81b0",
     "fileSize": 402754,
     "pageCount": 9
@@ -29,10 +29,28 @@
   {
     "cardId": "built-in-blackwing-2026-07",
     "originalFileName": "黑翼  A500指增CTA多策略+多策略混合纪要（26.07）.pdf",
-    "publicPath": "materials/roadshows/blackwing-2026-07-acbe88b5.pdf",
-    "category": "路演材料",
+    "publicPath": "materials/due-diligence/blackwing-2026-07-acbe88b5.pdf",
+    "category": "尽调报告",
     "sha256": "acbe88b58b13e138fba9dcfa307f551b483cb3c965cab241ab5836996cd12c99",
     "fileSize": 346949,
     "pageCount": 7
+  },
+  {
+    "cardId": "built-in-yuanlan-weekly-20260717",
+    "originalFileName": "上海远澜基金产品运行周报2026.7.13-2026.7.17.pdf",
+    "publicPath": "materials/roadshows/yuanlan-weekly-20260717-ca363844.pdf",
+    "category": "路演材料",
+    "sha256": "ca3638448da23e329ae9b148390933048c69bfffde7cf084adb52e65c93c3677",
+    "fileSize": 738415,
+    "pageCount": 3
+  },
+  {
+    "cardId": "built-in-yuanlesheng-midyear-20260713",
+    "originalFileName": "源乐晟杨建海年中策略会文字纪要（20260713）.pdf",
+    "publicPath": "materials/due-diligence/yuanlesheng-midyear-20260713-fc1e7cb4.pdf",
+    "category": "尽调报告",
+    "sha256": "fc1e7cb47763b88c7dcccbef8ee975d88cc4edad1ed83d720c441c92ef621628",
+    "fileSize": 182206,
+    "pageCount": 6
   }
 ]
