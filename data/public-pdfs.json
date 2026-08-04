@@ -2,8 +2,8 @@
   {
     "cardId": "built-in-zeyuan-2026-midyear",
     "originalFileName": "泽元投资2026年中期回顾与前瞻.pdf",
-    "publicPath": "materials/roadshows/zeyuan-2026-midyear-c3ac2d8a.pdf",
-    "category": "路演材料",
+    "publicPath": "materials/due-diligence/zeyuan-2026-midyear-c3ac2d8a.pdf",
+    "category": "尽调报告",
     "sha256": "c3ac2d8a445eb12e2309ef12b55e17be9d7ac30d222964a1edbd72dfbbf71c49",
     "fileSize": 224450,
     "pageCount": 3
@@ -38,8 +38,8 @@
   {
     "cardId": "built-in-yuanlan-weekly-20260717",
     "originalFileName": "上海远澜基金产品运行周报2026.7.13-2026.7.17.pdf",
-    "publicPath": "materials/roadshows/yuanlan-weekly-20260717-ca363844.pdf",
-    "category": "路演材料",
+    "publicPath": "materials/due-diligence/yuanlan-weekly-20260717-ca363844.pdf",
+    "category": "尽调报告",
     "sha256": "ca3638448da23e329ae9b148390933048c69bfffde7cf084adb52e65c93c3677",
     "fileSize": 738415,
     "pageCount": 3
@@ -52,5 +52,68 @@
     "sha256": "fc1e7cb47763b88c7dcccbef8ee975d88cc4edad1ed83d720c441c92ef621628",
     "fileSize": 182206,
     "pageCount": 6
+  },
+  {
+    "cardId": "built-in-century-frontier-2026-07",
+    "originalFileName": "世纪前沿 最新纪要+QA（26.07）.pdf",
+    "publicPath": "materials/due-diligence/century-frontier-2026-07-19a6a87e.pdf",
+    "category": "尽调报告",
+    "sha256": "19a6a87e8469a6b77ece0c618fc0e76b1bccb8064fa365b5c3815bc8e316a246",
+    "fileSize": 501922,
+    "pageCount": 12
+  },
+  {
+    "cardId": "built-in-xiva-weekly-20260717",
+    "originalFileName": "希瓦私募基金周报20260717.pdf",
+    "publicPath": "materials/due-diligence/xiva-weekly-20260717-a81b33d9.pdf",
+    "category": "尽调报告",
+    "sha256": "a81b33d9ea96fdd9bda495136e0e981def2f0a823fae06f5212a93e621cb3971",
+    "fileSize": 641370,
+    "pageCount": 1
+  },
+  {
+    "cardId": "built-in-hander-cta-202502",
+    "originalFileName": "涵德投资量化CTA策略介绍202502.pdf",
+    "publicPath": "materials/roadshows/hander-cta-202502-fc8cee13.pdf",
+    "category": "路演材料",
+    "sha256": "fc8cee13bd2ecf00581006dc04779bbe0641b8c1e3a98269709918f132fe8eac",
+    "fileSize": 3257365,
+    "pageCount": 18
+  },
+  {
+    "cardId": "built-in-yushu-strategy-20260626",
+    "originalFileName": "玉数投资公司及策略介绍_260626.pdf",
+    "publicPath": "materials/roadshows/yushu-strategy-20260626-d52b66ba.pdf",
+    "category": "路演材料",
+    "sha256": "d52b66ba9dc47e77b74f97bdde9257f294874948aa1e19d9f0e5b83b1f5ae50e",
+    "fileSize": 43625937,
+    "pageCount": 32
+  },
+  {
+    "cardId": "built-in-private-strategy-weekly-20260728",
+    "originalFileName": "20260728-私募策略跟踪周报：本周量化策略业绩分化，配置上注重稳健低波.pdf",
+    "publicPath": "materials/due-diligence/private-strategy-weekly-20260728-ae96da9e.pdf",
+    "category": "尽调报告",
+    "sha256": "ae96da9e30e09a8d801a3af69df7379b7c1b54d1dbc7a9f94985889f5057cfbd",
+    "fileSize": 2144306,
+    "pageCount": 30
+  },
+  {
+    "cardId": "built-in-cta-weekly-20260728",
+    "originalFileName": "20260728-CTA市场跟踪周报：CTA业绩修复，宏观扰动下，把握套利等短期波动机会.pdf",
+    "publicPath": "materials/due-diligence/cta-weekly-20260728-25f35b24.pdf",
+    "category": "尽调报告",
+    "sha256": "25f35b24d8b2ea72c4dec666b32507a2ef02fc0df2628ecd16e65fb6f71d7c2b",
+    "fileSize": 2820956,
+    "pageCount": 31
+  },
+  {
+    "cardId": "built-in-stock-strategy-weekly-20260726",
+    "originalFileName": "20260726-股票策略环境监控周报：恐慌释放，市场进入震荡磨底阶段.pdf",
+    "publicPath": "materials/due-diligence/stock-strategy-weekly-20260726-e40fcf3e.pdf",
+    "category": "尽调报告",
+    "sha256": "e40fcf3e029bf57f879cb56d179be71d8b9c71567b4726c9b0d6f510ca1b8110",
+    "fileSize": 4496811,
+    "pageCount": 44
   }
 ]
