@@ -151,8 +151,10 @@ button { color: inherit; }
 .card-detail { border-top: 1px solid var(--line); padding: 30px 27px 34px 126px; animation: reveal .25s ease-out; }
 @keyframes reveal { from { opacity: 0; transform: translateY(-5px); } }
 .record-audit { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 16px; margin-top: 18px; padding: 15px; background: #e8eee9; border: 1px solid #c8d3cd; }
+.record-audit.record-source-only, .record-audit.record-actions-only { grid-template-columns: 1fr; }
+.record-audit > div { min-width: 0; }
 .record-audit strong { display: block; color: var(--green); font-size: 10px; letter-spacing: .08em; margin-bottom: 5px; }
-.record-audit code { display: block; max-width: 360px; overflow: hidden; text-overflow: ellipsis; font-size: 10px; color: var(--muted); }
+.record-audit code { display: block; width: 100%; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: var(--muted); }
 .record-audit p { margin: 0; font-size: 11px; color: var(--muted); }
 .record-audit button { border: 0; background: var(--green); color: white; padding: 10px 14px; cursor: pointer; font-size: 11px; font-weight: 700; }
 .record-audit button:disabled { opacity: .55; }
@@ -163,11 +165,27 @@ button { color: inherit; }
 .pdf-toolbar h3 { margin: 0; font-size: 12px; }
 .pdf-toolbar p { max-width: 650px; margin: 4px 0 0; color: var(--muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pdf-toolbar a { color: var(--green); font-size: 11px; font-weight: 700; text-decoration: none; }
+.pdf-actions { display: flex !important; flex-wrap: wrap; justify-content: flex-end; gap: 6px !important; }
+.pdf-actions button, .pdf-actions select, .pdf-actions label, .pdf-actions a { min-height: 31px; display: inline-flex; align-items: center; border: 1px solid var(--line); background: #fff; color: var(--green); padding: 0 8px; font-size: 10px; font-weight: 700; }
+.pdf-actions button { cursor: pointer; }
+.pdf-actions button:disabled { opacity: .4; cursor: not-allowed; }
+.pdf-actions input { width: 43px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: center; color: var(--ink); }
 .pdf-panel iframe { display: block; width: 100%; height: 610px; border: 0; background: #fff; }
+.pdf-loading, .pdf-load-error { min-height: 230px; display: grid; place-items: center; align-content: center; gap: 8px; padding: 30px; text-align: center; color: var(--muted); font-size: 11px; }
+.pdf-load-error strong { color: var(--risk); font-size: 14px; }
+.pdf-load-error p { max-width: 620px; margin: 0; line-height: 1.6; }
+.pdf-load-error button { min-height: 36px; margin-top: 5px; border: 1px solid var(--green); background: var(--green); color: white; padding: 0 14px; cursor: pointer; font-size: 11px; font-weight: 700; }
 .pdf-placeholder { min-height: 230px; display: flex; align-items: center; justify-content: center; gap: 25px; color: var(--muted); }
 .pdf-placeholder strong { display: block; color: var(--ink); font-size: 14px; }
 .pdf-placeholder p { margin: 6px 0 0; max-width: 410px; font-size: 11px; line-height: 1.6; }
 .pdf-sheet { width: 58px; height: 72px; display: grid; place-items: center; background: #f8f6f1; border: 1px solid #bdb9af; border-radius: 3px 12px 3px 3px; color: var(--accent); font-size: 12px; font-weight: 800; box-shadow: 5px 6px 0 rgba(21,40,33,.06); }
+.attach-file { margin-top: 14px; min-height: 38px; border: 1px solid var(--green); background: var(--green); color: white; padding: 0 15px; cursor: pointer; font-size: 11px; font-weight: 700; }
+.batch-button { min-height: 38px; border: 1px solid var(--green); background: transparent; color: var(--green); padding: 0 13px; cursor: pointer; font-size: 11px; font-weight: 700; }
+.batch-fields { display: grid; gap: 11px; margin-bottom: 14px; }
+.batch-fields label { display: grid; grid-template-columns: 160px 1fr; align-items: center; gap: 10px; border: 1px solid var(--line); padding: 11px; color: var(--ink); font-size: 11px; font-weight: 700; }
+.batch-fields input { grid-column: 1 / -1; font-size: 10px; color: var(--muted); }
+.batch-fields span { color: var(--green); font-size: 10px; font-weight: 400; text-align: right; }
+.batch-note { margin: 12px 0; padding: 10px 12px; background: #edf3ef; color: var(--muted); font-size: 10px; line-height: 1.6; }
 
 .empty-state { border: 1px dashed #b8bbb4; padding: 70px 20px; text-align: center; color: var(--muted); }
 .empty-state span { font-size: 30px; color: var(--green); }
@@ -255,6 +273,7 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
   .local-pill { display: none; }
   .header-actions { gap: 7px; }
   .ai-entry { display: none; }
+  .batch-button { display: none; }
   .workspace { padding: 0 20px; }
   .hero { display: block; min-height: 0; padding: 48px 0 38px; }
   .hero-stats { min-width: 0; margin-top: 30px; }
@@ -269,6 +288,8 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
   .expand-control { grid-column: 2; }
   .card-detail { padding: 26px 20px; }
   .record-audit { grid-template-columns: 1fr; }
+  .pdf-toolbar { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .pdf-actions { width: 100%; justify-content: flex-start; }
   .assistant-panel { width: 100vw; }
 }
 
@@ -283,13 +304,17 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
   .tabs button { padding: 16px; }
   .tabs button span { font-size: 18px; }
   .tabs button b { right: 15px; top: 15px; }
-  .card-summary { grid-template-columns: 1fr; }
+  .material-card, .card-summary, .card-main, .title-row, .record-audit, .pdf-panel { width: 100%; min-width: 0; }
+  .card-summary { grid-template-columns: minmax(0, 1fr); }
+  .card-main h2 { overflow-wrap: anywhere; }
   .card-date { min-height: 0; display: flex; align-items: center; gap: 8px; padding: 0 0 11px; border-right: 0; border-bottom: 1px solid var(--line); }
   .card-date span, .card-date strong { display: inline; margin: 0; }
   .card-date strong { font-size: 15px; }
   .card-delete { margin: 0 0 0 auto; }
   .expand-control { grid-column: 1; }
   .pdf-placeholder { padding: 30px 20px; }
+  .pdf-actions label { order: -1; }
+  .pdf-panel iframe { height: 520px; }
 }
 
 /* Browser-only library additions */
@@ -298,16 +323,6 @@ footer { display: flex; justify-content: space-between; border-top: 1px solid va
 .source-local { color: #8a552f; border-color: #d6b894; background: #fff4e5; }
 .record-actions { display: flex; gap: 7px; }
 .record-audit .danger-action { background: var(--risk); }
-.text-panel { margin-top: 24px; border: 1px solid var(--line); background: #fff; }
-.text-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--line); background: #f3f3ed; }
-.text-panel-head h3 { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 17px; }
-.text-panel-head span { color: var(--muted); font-size: 10px; }
-.page-text-list { max-height: 670px; overflow: auto; }
-.page-text-list section { padding: 20px 22px; border-bottom: 1px solid var(--line); }
-.page-text-list h4 { margin: 0 0 12px; color: var(--green); font-size: 12px; }
-.page-text-list h4 small { margin-left: 8px; color: var(--muted); font-weight: 400; }
-.page-text-list p { margin: 0; white-space: pre-wrap; color: #45534d; font-size: 12px; line-height: 1.9; }
-.text-empty { padding: 35px 22px; text-align: center; color: var(--muted); font-size: 11px; }
 .upload-fields { display: grid; gap: 10px; margin: 12px 0; }
 .upload-fields label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; }
 .upload-fields input { width: 100%; height: 39px; border: 1px solid var(--line); background: white; padding: 0 10px; }

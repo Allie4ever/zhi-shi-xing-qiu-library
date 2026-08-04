@@ -20,9 +20,25 @@ export type Material = {
   risks: string[];
   tags: string[];
   status: Status;
-  sourceType: "built-in" | "local";
+  sourceType: "built-in" | "local" | "private-local";
   fileName?: string;
   fileHash?: string;
+  fileSize?: number;
+  localFileKey?: string;
+  originalFileName?: string;
+  expectedSha256?: string;
+  postTitle?: string;
+  postedAt?: string;
+  fileId?: string;
+  locallyBound?: boolean;
+  pagesUrl?: string;
+  pagesAvailable?: boolean;
+  pdfAvailable?: boolean;
+  groupName?: string;
+  sourceUrl?: string;
+  author?: string;
+  classificationBasis?: string;
+  textExtractionStatus?: string;
   needsOcr?: boolean;
   pages?: MaterialPage[];
   fullText?: string;
@@ -34,4 +50,3 @@ export type Material = {
   createdAt?: string;
   updatedAt?: string;
 };
-

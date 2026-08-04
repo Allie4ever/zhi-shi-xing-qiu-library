@@ -36,7 +36,18 @@ test("浏览器存储、去重和PDF分页提取均为客户端实现", async ()
   assert.match(page, /仅保存正文、不保存PDF原件/);
   assert.match(page, /清除浏览器数据、使用无痕模式或更换设备/);
   assert.match(store, /deletedMaterials/);
-  assert.match(store, /transaction\(\[STORE_NAME, DELETED_STORE_NAME\], "readwrite"\)/);
+  assert.match(store, /FILE_STORE_NAME = "files"/);
+  assert.match(store, /transaction\(\[STORE_NAME, DELETED_STORE_NAME, FILE_STORE_NAME\], "readwrite"\)/);
+  assert.match(store, /remaining\.length\) files\.delete\(hash\)/);
+  assert.match(page, /补充原始文件/);
+  assert.match(page, /批量导入已抓取材料/);
+  assert.match(page, /SHA-256不匹配/);
+  assert.match(page, /适应宽度/);
+  assert.doesNotMatch(page, /程序提取的真实完整正文|暂无正文|page-text-list/);
+  assert.match(page, /fullText: extracted\.pages/);
+  assert.match(page, /material\.pages\?\.filter/);
+  assert.match(page, /PDF加载失败/);
+  assert.match(page, /尚未收录该材料的PDF原件/);
   assert.match(page, /确定要删除《\$\{material\.title\}》吗？删除后不可恢复。/);
   assert.match(page, /deletingIdRef\.current/);
   assert.match(page, /全部年份/);
@@ -60,4 +71,21 @@ test("GitHub Pages产物使用仓库子路径且不含敏感内容", async () =>
     const content = await readFile(new URL(`pages-dist/assets/${name}`, root), "utf8");
     assert.doesNotMatch(content, /\/Users\/allie4ever|localhost:3001|sk-[A-Za-z0-9_-]{12,}/);
   }
+});
+
+test("localhost私有资料接口只读、限制根目录并支持Range", async () => {
+  const [plugin, config, page] = await Promise.all([
+    readFile(new URL("build/private-library-plugin.ts", root), "utf8"),
+    readFile(new URL("vite.pages.config.ts", root), "utf8"),
+    readFile(new URL("app/page.tsx", root), "utf8"),
+  ]);
+  assert.match(config, /privateLibraryPlugin\(\)/);
+  assert.match(plugin, /apply: "serve"/);
+  assert.match(plugin, /target\.startsWith\(`\$\{root\}\$\{sep\}`\)/);
+  assert.match(plugin, /request\.method !== "GET" && request\.method !== "HEAD"/);
+  assert.match(plugin, /accept-ranges/);
+  assert.match(plugin, /content-range/);
+  assert.match(plugin, /record\.category !== "尽调报告" && record\.category !== "路演材料"/);
+  assert.match(page, /location\.hostname === "localhost" \|\| location\.hostname === "127\.0\.0\.1"/);
+  assert.match(page, /fetch\("\/api\/local-materials"\)/);
 });

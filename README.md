@@ -1,7 +1,7 @@
 # 知识星球材料库
 
-无需登录、无需后端的静态私募研究材料库。公开页面部署在 GitHub Pages；用户导入的
-PDF、分页正文和元数据只保存在当前浏览器的 IndexedDB 中，不会上传到 GitHub 或云端。
+无需登录的私募研究材料库。公开页面部署在 GitHub Pages；localhost 开发服务器会通过
+只读接口自动索引 `private/PDF资料`，用户无需逐份上传已抓取材料。
 
 ## 本地运行
 
@@ -11,6 +11,16 @@ npm run dev
 ```
 
 开发地址通常为 `http://localhost:3000/`。
+
+启动后，本机模式自动读取：
+
+- `private/PDF资料/尽调报告/`（存在时）
+- `private/PDF资料/路演材料/`
+- `private/PDF资料/元数据/`
+- `private/PDF资料/分页正文/`
+
+本地接口包括 `GET /api/local-materials`、单份元数据、PDF和分页正文；PDF支持Range读取。
+接口只在开发服务器启用，不能写入原始文件，也不能读取配置目录之外的路径。
 
 ## 生产构建
 

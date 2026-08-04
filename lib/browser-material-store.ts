@@ -1,9 +1,18 @@
 import type { Material } from "./material-types";
 
 const DB_NAME = "zhi-shi-xing-qiu-library";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = "materials";
 const DELETED_STORE_NAME = "deletedMaterials";
+const FILE_STORE_NAME = "files";
+
+export type StoredPdf = {
+  hash: string;
+  blob: Blob;
+  fileName: string;
+  size: number;
+  createdAt: string;
+};
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -12,14 +21,33 @@ function openDatabase(): Promise<IDBDatabase> {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
-        store.createIndex("fileHash", "fileHash", { unique: true });
+        store.createIndex("fileHash", "fileHash", { unique: false });
+      } else {
+        const store = request.transaction!.objectStore(STORE_NAME);
+        if (store.indexNames.contains("fileHash")) store.deleteIndex("fileHash");
+        store.createIndex("fileHash", "fileHash", { unique: false });
       }
       if (!db.objectStoreNames.contains(DELETED_STORE_NAME)) {
         db.createObjectStore(DELETED_STORE_NAME, { keyPath: "id" });
       }
+      if (!db.objectStoreNames.contains(FILE_STORE_NAME)) {
+        db.createObjectStore(FILE_STORE_NAME, { keyPath: "hash" });
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error("无法打开浏览器材料库"));
+  });
+}
+
+async function transactFile<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequest<T>) {
+  const db = await openDatabase();
+  return new Promise<T>((resolve, reject) => {
+    const transaction = db.transaction(FILE_STORE_NAME, mode);
+    const request = run(transaction.objectStore(FILE_STORE_NAME));
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error("浏览器PDF存储操作失败"));
+    transaction.oncomplete = () => db.close();
+    transaction.onerror = () => reject(transaction.error ?? new Error("浏览器PDF存储事务失败"));
   });
 }
 
@@ -63,6 +91,26 @@ export function saveLocalMaterial(material: Material) {
   return transact<IDBValidKey>("readwrite", (store) => store.put(material));
 }
 
+export function getStoredPdf(hash: string) {
+  return transactFile<StoredPdf | undefined>("readonly", (store) => store.get(hash));
+}
+
+export async function savePdfAndMaterial(material: Material, pdf: StoredPdf) {
+  const db = await openDatabase();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME, FILE_STORE_NAME], "readwrite");
+    transaction.objectStore(FILE_STORE_NAME).put(pdf);
+    transaction.objectStore(STORE_NAME).put(material);
+    transaction.oncomplete = () => { db.close(); resolve(); };
+    transaction.onabort = () => { db.close(); reject(transaction.error ?? new Error("PDF与卡片绑定未完成")); };
+    transaction.onerror = () => reject(transaction.error ?? new Error("PDF与卡片绑定失败"));
+  });
+}
+
+export function deleteMaterialRecord(id: string) {
+  return transact<undefined>("readwrite", (store) => store.delete(id));
+}
+
 export function deleteLocalMaterial(id: string) {
   return transact<undefined>("readwrite", (store) => store.delete(id));
 }
@@ -76,12 +124,24 @@ export function markMaterialDeleted(id: string) {
   return transactDeleted<IDBValidKey>("readwrite", (store) => store.put({ id, deletedAt: new Date().toISOString() }));
 }
 
-export async function deleteMaterialPersistently(id: string, deleteLocalRecord: boolean) {
+export async function deleteMaterialPersistently(id: string, _deleteLocalRecord: boolean) {
   const db = await openDatabase();
   return new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME, DELETED_STORE_NAME], "readwrite");
+    const transaction = db.transaction([STORE_NAME, DELETED_STORE_NAME, FILE_STORE_NAME], "readwrite");
+    const materials = transaction.objectStore(STORE_NAME);
+    const files = transaction.objectStore(FILE_STORE_NAME);
     transaction.objectStore(DELETED_STORE_NAME).put({ id, deletedAt: new Date().toISOString() });
-    if (deleteLocalRecord) transaction.objectStore(STORE_NAME).delete(id);
+    const recordRequest = materials.get(id);
+    recordRequest.onsuccess = () => {
+      const hash = recordRequest.result?.fileHash as string | undefined;
+      materials.delete(id);
+      if (!hash) return;
+      const refsRequest = materials.index("fileHash").getAll(hash);
+      refsRequest.onsuccess = () => {
+        const remaining = refsRequest.result.filter((record: Material) => record.id !== id);
+        if (!remaining.length) files.delete(hash);
+      };
+    };
     transaction.oncomplete = () => { db.close(); resolve(); };
     transaction.onabort = () => { db.close(); reject(transaction.error ?? new Error("删除操作未完成")); };
     transaction.onerror = () => reject(transaction.error ?? new Error("删除操作失败"));
