@@ -35,6 +35,7 @@ test("浏览器存储、去重和PDF分页提取均为客户端实现", async ()
   assert.match(pdf, /crypto\.subtle\.digest\("SHA-256"/);
   assert.match(page, /需要OCR/);
   assert.match(page, /仅保存正文、不保存PDF原件/);
+  assert.doesNotMatch(page, /upload-fields|uploadForm\.manager|uploadForm\.title|uploadForm\.materialDate/);
   assert.match(page, /清除浏览器数据、使用无痕模式或更换设备/);
   assert.match(store, /deletedMaterials/);
   assert.match(store, /FILE_STORE_NAME = "files"/);
