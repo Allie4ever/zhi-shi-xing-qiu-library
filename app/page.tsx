@@ -13,6 +13,7 @@ import { filterAndSortMaterials, parseMaterialDate } from "../lib/material-query
 type AiScope = "all" | Route | "current";
 type Citation = { materialId: string; title: string; manager: string; pageNumber: number | null; paragraphLabel: string; excerpt: string };
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; citations?: Citation[] };
+type CardAnalysis = { status: "loading" | "ready" | "error"; text?: string };
 type CrawledMetadata = {
   original_filename: string; post_title?: string; pdf_title?: string; posted_at?: string;
   file_id?: string | null; sha256?: string; category: string; classification_basis?: string;
@@ -92,10 +93,12 @@ function PdfViewer({ material, onReplace }: { material: Material; onReplace: () 
   </section>;
 }
 
-function MaterialCard({ material, open, onToggle, onRename, onStatus, onDelete, onAttach, deleting }: {
+function MaterialCard({ material, open, onToggle, onRename, onStatus, onDelete, onAttach, onAnalyze, analysis, deleting }: {
   material: Material; open: boolean; onToggle: () => void; onRename: () => void;
-  onStatus: () => void; onDelete: () => void; onAttach: () => void; deleting: boolean;
+  onStatus: () => void; onDelete: () => void; onAttach: () => void; onAnalyze: () => void;
+  analysis?: CardAnalysis; deleting: boolean;
 }) {
+  const needsAiAnalysis = !material.summary?.trim() || material.summary.trim() === "待人工整理";
   return <article id={`material-${material.id}`} className={`material-card ${open ? "is-open" : ""}`}>
     <div className="card-summary" role="button" tabIndex={0} aria-expanded={open} onClick={onToggle} onKeyDown={(event) => {
       if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onToggle(); }
@@ -105,8 +108,11 @@ function MaterialCard({ material, open, onToggle, onRename, onStatus, onDelete, 
         <div className="eyebrow-row"><span className="manager">{material.manager}</span><span className={`status status-${material.status}`}>{material.status}</span>{material.sourceType === "local" && <span className="source-badge source-local">浏览器临时导入</span>}</div>
         <div className="title-row"><h2>{material.title}</h2>{material.sourceType === "local" && <button className="rename-button" aria-label="重命名标题" title="重命名标题" onClick={(event) => { event.stopPropagation(); onRename(); }}>✎</button>}</div>
         <div className="meta-row"><span>{material.strategy || "待人工整理"}</span><span>{displayDate(material.materialDate)}</span>{(material.pdfUrl || material.pdfBlob) && <span className="pdf-mark">PDF</span>}</div>
-        <p className="summary">{material.summary?.trim() || "待人工整理"}</p>
-        <div className="tag-row">{material.tags.filter((tag) => tag !== "本机私有资料" && tag !== "网站内置").map((tag) => <span className="tag" key={tag}>{tag}</span>)}</div>
+        {needsAiAnalysis ? <div className="card-ai-area">
+          <button className="ai-analysis-trigger" type="button" disabled={analysis?.status === "loading"} onClick={(event) => { event.stopPropagation(); onAnalyze(); }}>{analysis?.status === "loading" ? "正在分析PDF…" : analysis?.status === "ready" ? "重新分析" : "✦ AI分析"}</button>
+          {analysis && <div className={`ai-analysis-card ${analysis.status}`} onClick={(event) => event.stopPropagation()}>{analysis.status === "loading" ? <><strong>正在读取并分析PDF正文</strong><p>相关正文片段会发送至你配置的AI服务商，请稍候。</p></> : <><strong>{analysis.status === "ready" ? "AI材料分析" : "分析未完成"}</strong><p>{analysis.text}</p></>}</div>}
+        </div> : <p className="summary">{material.summary}</p>}
+        <div className="tag-row">{material.tags.filter((tag) => tag !== "本机私有资料" && tag !== "网站内置" && tag !== "待人工整理").map((tag) => <span className="tag" key={tag}>{tag}</span>)}</div>
       </div>
       <span className="expand-control"><span>{open ? "收起" : "查看详情"}</span><i>{open ? "−" : "+"}</i></span>
     </div>
@@ -159,6 +165,7 @@ export default function Home() {
   const [chatQuestion, setChatQuestion] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatBusy, setChatBusy] = useState(false);
+  const [cardAnalyses, setCardAnalyses] = useState<Record<string, CardAnalysis>>({});
 
   const hydrate = async () => {
     const [records, persistedDeletedIds] = await Promise.all([listLocalMaterials(), listDeletedMaterialIds()]);
@@ -386,6 +393,55 @@ export default function Home() {
     try { await callAi([{ role: "user", content: "只回复：连接成功" }], 20); setAiFeedback({ kind: "success", text: "连接成功。" }); } catch (error) { setAiFeedback({ kind: "error", text: safeError(error, "连接失败") }); } finally { setAiBusy(false); }
   }
 
+  async function analyzeMaterial(material: Material) {
+    if (cardAnalyses[material.id]?.status === "loading") return;
+    if (!aiConfigured) {
+      setCardAnalyses((items) => ({ ...items, [material.id]: { status: "error", text: "请先在右上角完成AI设置，再点击AI分析。" } }));
+      setAiSettingsOpen(true);
+      setAiFeedback({ kind: "error", text: "请先配置AI API，相关PDF正文片段将发送至该服务商进行分析。" });
+      return;
+    }
+    if (!material.pdfUrl && !material.pdfBlob) {
+      setCardAnalyses((items) => ({ ...items, [material.id]: { status: "error", text: "该卡片尚未收录可读取的PDF原件。" } }));
+      return;
+    }
+    setCardAnalyses((items) => ({ ...items, [material.id]: { status: "loading" } }));
+    try {
+      let pages = material.pages;
+      if (!pages?.length) {
+        const blob = material.pdfBlob ?? await fetch(material.pdfUrl!).then((response) => {
+          if (!response.ok) throw new Error(`PDF读取失败（${response.status}）`);
+          return response.blob();
+        });
+        const extracted = await extractPdfPages(blob);
+        if (extracted.needsOcr || !extracted.pages.some((page) => page.text.trim())) throw new Error("该PDF没有可提取正文，需要OCR后才能进行AI分析。");
+        pages = extracted.pages;
+      }
+      const chunks: string[] = [];
+      let current = "";
+      for (const page of pages) {
+        const section = `\n\n[PDF第${page.pageNumber}页]\n${page.text.trim() || "本页无可提取文本"}`;
+        if (current && current.length + section.length > 16000) { chunks.push(current); current = ""; }
+        current += section;
+      }
+      if (current) chunks.push(current);
+      const partials: string[] = [];
+      for (let index = 0; index < chunks.length; index += 1) {
+        partials.push(await callAi([
+          { role: "system", content: "你是私募材料分析助手。只能概括所给PDF原文，不得补充、猜测或编造；保留关键数字、策略特征、业绩口径、风险与待核验事项，并注明相关PDF页码。" },
+          { role: "user", content: `材料：《${material.title}》\n这是第${index + 1}/${chunks.length}个正文分段，请提炼该分段：${chunks[index]}` },
+        ], 450));
+      }
+      const result = await callAi([
+        { role: "system", content: "你是私募材料分析助手。只能依据分段提炼结果形成最终摘要，不得编造。输出三个简洁部分：材料概要、核心重点、风险与待核验；保留PDF页码依据。" },
+        { role: "user", content: `材料：《${material.title}》｜${material.manager}\n\n${partials.map((text, index) => `[分段${index + 1}]\n${text}`).join("\n\n")}` },
+      ], 800);
+      setCardAnalyses((items) => ({ ...items, [material.id]: { status: "ready", text: result || "当前材料库中没有足够信息" } }));
+    } catch (error) {
+      setCardAnalyses((items) => ({ ...items, [material.id]: { status: "error", text: safeError(error, "AI分析失败") } }));
+    }
+  }
+
   async function sendQuestion() {
     const question = chatQuestion.trim(); if (!question || chatBusy) return;
     if (!aiConfigured) { setAiSettingsOpen(true); setAiFeedback({ kind: "error", text: "请先配置AI API。" }); return; }
@@ -412,7 +468,7 @@ export default function Home() {
       <nav className="tabs">{tabs.map((tab) => <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => { setActiveTab(tab.id); setStatusFilter("全部"); setOpenId(null); }}><span>{tab.label}</span><small>{tab.hint}</small><b>{materials.filter((item) => item.route === tab.id).length}</b></button>)}</nav>
       <section className="library"><div className="library-head"><div><p className="section-kicker">MATERIAL INDEX</p><h2>{currentTab.label}</h2><p>{currentTab.hint}，共 {materials.filter((item) => item.route === activeTab).length} 份。</p></div><div className="filter-stack"><label className="search"><span>⌕</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索管理人或策略" /></label><div className="month-filter"><label><span>年份</span><select value={selectedYear} onChange={(event) => setSelectedYear(event.target.value)}><option value="">全部年份</option>{availableYears.map((year) => <option key={year} value={year}>{year}年</option>)}</select></label><label><span>月份</span><select value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)}><option value="">全部月份</option>{Array.from({ length: 12 }, (_, index) => index + 1).map((month) => <option key={month} value={month}>{month}月</option>)}</select></label></div></div></div>
         <div className="status-filters"><button className={statusFilter === "全部" ? "active" : ""} onClick={() => setStatusFilter("全部")}>全部 <span>{materials.filter((item) => item.route === activeTab).length}</span></button>{statusOptions.map((status) => <button key={status} className={statusFilter === status ? "active" : ""} onClick={() => setStatusFilter(status)}>{status} <span>{counts[status]}</span></button>)}</div>
-        <div className="material-list">{!loaded ? <div className="empty-state"><p>正在读取浏览器材料库…</p></div> : filtered.length ? filtered.map((material) => <MaterialCard key={material.id} material={material} open={openId === material.id} onToggle={() => toggleMaterial(material)} onRename={() => renameMaterial(material)} onStatus={() => updateMaterial(material, { status: material.status === "已发布" ? "待复核" : "已发布" }).catch((error) => setNotice({ kind: "error", text: safeError(error, "状态更新失败") }))} onDelete={() => removeMaterial(material)} onAttach={() => chooseAttachment(material)} deleting={deletingId === material.id} />) : <div className="empty-state"><span>◎</span><h3>没有符合条件的材料</h3><p>当前搜索词、状态或月份下没有材料，请调整筛选条件。</p></div>}</div>
+        <div className="material-list">{!loaded ? <div className="empty-state"><p>正在读取浏览器材料库…</p></div> : filtered.length ? filtered.map((material) => <MaterialCard key={material.id} material={material} open={openId === material.id} onToggle={() => toggleMaterial(material)} onRename={() => renameMaterial(material)} onStatus={() => updateMaterial(material, { status: material.status === "已发布" ? "待复核" : "已发布" }).catch((error) => setNotice({ kind: "error", text: safeError(error, "状态更新失败") }))} onDelete={() => removeMaterial(material)} onAttach={() => chooseAttachment(material)} onAnalyze={() => analyzeMaterial(material)} analysis={cardAnalyses[material.id]} deleting={deletingId === material.id} />) : <div className="empty-state"><span>◎</span><h3>没有符合条件的材料</h3><p>当前搜索词、状态或月份下没有材料，请调整筛选条件。</p></div>}</div>
       </section><footer><span>来源：知识星球知识库</span></footer>
     </div>
     <input ref={attachInputRef} hidden type="file" accept="application/pdf,.pdf" onChange={handleAttachment} />

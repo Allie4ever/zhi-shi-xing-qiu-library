@@ -178,5 +178,59 @@
     "sha256": "b72aeddcd55203f92a9ee03912df77ba8503a0eb1cab6bf89efdae5d2117d1cc",
     "fileSize": 335040,
     "pageCount": 7
+  },
+  {
+    "cardId": "built-in-cta-market-observation-20260710",
+    "originalFileName": "20260710-CTA市场观察报告.pdf",
+    "publicPath": "materials/due-diligence/cta-market-observation-20260710-a158919d.pdf",
+    "category": "尽调报告",
+    "sha256": "a158919d5f2739180956dfc2f18b2b263e94fae1c3577cf018996e7cc22b8d45",
+    "fileSize": 1288494,
+    "pageCount": 9
+  },
+  {
+    "cardId": "built-in-zhixing-brief-20260710",
+    "originalFileName": "知行通达产品简报_260710.pdf",
+    "publicPath": "materials/roadshows/zhixing-brief-20260710-43384d79.pdf",
+    "category": "路演材料",
+    "sha256": "43384d798fed1fef7fcc430c90ad03ed3ed2782f619b4d2d21dbba4dfc55a2a9",
+    "fileSize": 203396,
+    "pageCount": 1
+  },
+  {
+    "cardId": "built-in-gaoyi-q2-2026",
+    "originalFileName": "华润信托•高毅晓峰精选1-17号集合资金信托计划2026年2季度投资报告.pdf",
+    "publicPath": "materials/due-diligence/gaoyi-q2-2026-204bffd6.pdf",
+    "category": "尽调报告",
+    "sha256": "204bffd69e6d9ebae22da9b535bf8a7096d116b3865ae25746c39dbb04325440",
+    "fileSize": 549728,
+    "pageCount": 4
+  },
+  {
+    "cardId": "built-in-kaidu-company-20260618",
+    "originalFileName": "凯读私募基金公司介绍20260618.pdf",
+    "publicPath": "materials/roadshows/kaidu-company-20260618-859d8ed9.pdf",
+    "category": "路演材料",
+    "sha256": "859d8ed994b742d54a826965c62a79af2349beac89f64e2f221ee8b6833dc44d",
+    "fileSize": 1876077,
+    "pageCount": 15
+  },
+  {
+    "cardId": "built-in-honghu-q3-20260630",
+    "originalFileName": "泓湖梁文涛 最新三季度策略沟通会全文_20260630.pdf",
+    "publicPath": "materials/roadshows/honghu-q3-20260630-90581805.pdf",
+    "category": "路演材料",
+    "sha256": "90581805a4431cabb9871a04e1b5b32b973721582ee5aaee7e2986adbcb9911e",
+    "fileSize": 536666,
+    "pageCount": 15
+  },
+  {
+    "cardId": "built-in-minghong-monthly-202606",
+    "originalFileName": "明汯多策略对冲1号基金-2026年06月月报.pdf",
+    "publicPath": "materials/due-diligence/minghong-monthly-202606-ef24aa2c.pdf",
+    "category": "尽调报告",
+    "sha256": "ef24aa2cd305cb68c95170cbcf19fcddba068366f119e6003b878b5c64a57a30",
+    "fileSize": 382229,
+    "pageCount": 5
   }
 ]
