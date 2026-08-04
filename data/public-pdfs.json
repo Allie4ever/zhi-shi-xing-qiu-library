@@ -16,5 +16,14 @@
     "sha256": "6c3a2de0576baab523cbd05ef54425ef3350071ea247be6fef9786bff00a81b0",
     "fileSize": 402754,
     "pageCount": 9
+  },
+  {
+    "cardId": "built-in-liangke-20250430",
+    "originalFileName": "量客投资介绍_20250430.pdf",
+    "publicPath": "materials/roadshows/liangke-investment-20250430-620292b6.pdf",
+    "category": "路演材料",
+    "sha256": "620292b618300095994932454934b2547bd22452704702ef4c916e32e08f9f3d",
+    "fileSize": 2780146,
+    "pageCount": 49
   }
 ]
